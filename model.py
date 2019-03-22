@@ -7,10 +7,15 @@ Foraging model
 from schedule import RandomActivation
 from agent import Bird
 
+import time
 import random
 
+
 class Model:
-    """ Base class for models. Taken from mesa. """
+    """ Base class for models.
+
+    **Taken from mesa. **
+     """
 
     def __new__(cls, *args, **kwargs):
         """Create a new model object and instantiate its RNG automatically."""
@@ -56,9 +61,10 @@ class Model:
             seed: A new seed for the RNG; if None, reset using the current seed
         """
 
+
 class OystercatcherModel(Model):
 
-    def __init(self, init_prey, availability, temperature, init_birds, mussel):
+    def __init__(self, init_prey, availability, temperature, init_birds, mussel):
         """ Create a new model with given parameters
         :param init_prey: list with initial prey on patches #todo: divide in diff prey
         :param availability: array with availability on all patches for all t
@@ -66,6 +72,7 @@ class OystercatcherModel(Model):
         :param init_birds: number of agents to start with
         :param mussel: boolean to indicate if forage is on or off
         """
+        super().__init__()
 
         # set parameters #todo: zet sommige dingen in param file
         self.prey = init_prey
@@ -83,7 +90,7 @@ class OystercatcherModel(Model):
         for i in range(self.init_birds):
 
             # give random position #todo: should be according to ideal distribution
-            position = random.randrange(self.len(init_prey))
+            pos = random.randrange(len(self.prey))
 
             unique_id = self.next_id()
             dominance = unique_id # todo: should be taken from distribution/data
@@ -92,13 +99,14 @@ class OystercatcherModel(Model):
             energy = 10 #todo: should be taken from distr/data
 
             # instantiate class
-            bird = Bird #todo
+            bird = Bird(unique_id, pos, self, dominance, energy)
 
-            # place and add to schedule todo
+            # place and add to schedule todo: place agent on something
+            self.schedule.add(bird)
 
-        # todo: datacollector
 
     def step(self):
+        print("new model step")
 
         # if we reach a new tidal cycle:
         #       - we should calculate a new route for all agents
@@ -115,6 +123,7 @@ class OystercatcherModel(Model):
 
         # simulate
         for i in range(step_count):
+            print(i)
             self.step()
 
         print("Final number of birds: {}".format(self.schedule.get_agent_count()))

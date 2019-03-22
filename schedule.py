@@ -18,7 +18,7 @@ class BaseScheduler:
         self.model = model
         self.steps = 0
         self.time = 0
-        self._agents = OrderedDict
+        self._agents = OrderedDict()
 
     def add(self, agent):
         """ Add an Agent object to the schedule.

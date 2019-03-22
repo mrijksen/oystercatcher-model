@@ -25,6 +25,7 @@ class Bird:
         self.model = model
         self.dominance = dominance
         self.energy = energy
+        self.pos = pos
 
         # array with route for coming time steps
         self.route = []
@@ -34,6 +35,9 @@ class Bird:
 
     def step(self): # todo:
         """A model step. Move, then eat. """
+
+        # get current location
+        print(self.pos, "position")
 
         # get new location
 
@@ -46,6 +50,8 @@ class Bird:
         # (update patch todo: should this be here? or do we substract sum of all ir's?)
 
         # apply death
+
+        print(self.unique_id)
 
 
 
