@@ -12,7 +12,7 @@
 #     @property
 #     def random(self):
 #         return self.model.random
-
+import numpy as np
 
 class Bird:
     """
@@ -28,7 +28,8 @@ class Bird:
         self.pos = pos
 
         # array with route for coming time steps
-        self.route = []
+        self.route = np.zeros(model.get_steps(model.num_tidal_cycles, model.minutes_in_tidal_cycle,
+                                              model.resolution_min))
 
         # number of encounters won
         self.L = None
@@ -36,8 +37,8 @@ class Bird:
     def step(self): # todo:
         """A model step. Move, then eat. """
 
-        # get current location
-        print(self.pos, "position")
+        # # get current location
+        # print("position: ", self.pos)
 
         # get new location
 
@@ -50,8 +51,6 @@ class Bird:
         # (update patch todo: should this be here? or do we substract sum of all ir's?)
 
         # apply death
-
-        print(self.unique_id)
 
 
 
