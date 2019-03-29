@@ -67,14 +67,15 @@ class Model:
 
 class OystercatcherModel(Model):
 
-    def __init__(self, init_prey, availability, temperature, init_birds, num_tidal_cycles, mussel, resolution_min=10,
+    def __init__(self, init_prey, availability, init_birds, num_tidal_cycles, mussel, resolution_min=10,
                  minutes_in_tidal_cycle=720):
         """ Create a new model with given parameters
         :param init_prey: list with initial prey on patches #todo: divide in diff prey
         :param availability: array with availability on all patches for all t
-        :param temperature: global temperature for all t
+        :param temperature: global temperature for all t #todo: add this
         :param init_birds: number of agents to start with
         :param mussel: boolean to indicate if forage is on or off
+        :param num_tidal_cycles: number of tidal cycles we want to simulate
         """
         super().__init__()
 
@@ -83,8 +84,6 @@ class OystercatcherModel(Model):
         self.availability = availability
         self.init_birds = init_birds
         self.mussel = mussel
-
-        # self.temperature = temperature todo: later toevoegen
 
         # tidal cycle parameters and total number of model steps
         self.num_tidal_cycles = num_tidal_cycles
@@ -119,7 +118,7 @@ class OystercatcherModel(Model):
     def step(self):
         # print("\nNew model step")
 
-
+        print(self.schedule.agents)
 
         # - we have to update prey decline for all time steps
 
@@ -132,7 +131,7 @@ class OystercatcherModel(Model):
     def run_model(self):
         print("Initial number birds: {}".format(self.init_birds))
 
-        # simulate
+        # simulate for given number of num_steps
         for i in range(self.num_steps):
             # print(i)
             self.step()
@@ -148,39 +147,6 @@ class OystercatcherModel(Model):
         """
         return int((num_tidal_cycles * minutes_in_tidal_cycle) / resolution_min)
 
-    def calculate_route_agent_for_loops(self, agent, num_agents_all_patches, m0, m1):
-        """Method to calculate route based on number of agents on patches,
-        current prey on patches and availability.
-
-        In this case, we use for loops to iterate over time.
-
-        Updates route for one agent.
-
-        In case a patch is not available, IR becomes zero
-
-        :param agent: agent we are currently calculating route for.
-        :param num_agents_all_patches: number of agent on all patches for all time steps
-        """
-        test_list = np.zeros(self.steps_per_tidal_cycle)
-        # iterate over time steps in one tidal cycle
-        for step in range(self.steps_per_tidal_cycle):
-
-            # apply formulas for intake rate
-            available_prey = self.prey * self.availability[step]  # unavailable prey patches become zero
-            intake_rate_all_patches = available_prey * ((num_agents_all_patches[step] + 1) ** (-m0 - m1 * agent.L))
-
-            # get index of patch with maximal IR
-            index_patch_max_intake = np.argmax(intake_rate_all_patches)
-
-            # change num_agents_all_patches
-            num_agents_all_patches[step, index_patch_max_intake] += 1
-
-            # add new position to agent's route
-            test_list[step] = index_patch_max_intake
-        # return test_list
-        # print(test_list, "agent route for loops")
-
-
 
     @staticmethod #todo: this should be L on current patch, not in total system! should we put this in agents.py?
     def calculate_L(total_num_agents, dominance):
@@ -190,37 +156,6 @@ class OystercatcherModel(Model):
             return (total_num_agents - dominance) * 100 / (total_num_agents - 1)
         else:
             return 100 #todo: should this be 100?
-
-    # def step_route_algorithm(self):
-    #     # if we reach a new tidal cycle #todo: this can be done more elegant
-    #     if self.schedule.time % (self.minutes_in_tidal_cycle / self.resolution_min) == 0:
-    #         start = time.time()
-    #         self.route_calculation()
-    #         print("Route time", time.time() - start)
-
-    # def route_calculation(self):
-    #     """ Here we should include the calculation of agent routes """
-    #
-    #     num_agents_on_patches = np.zeros([self.num_steps, len(self.prey)], dtype=int)
-    #     total_num_agents = len(self.schedule.agents)
-    #
-    #     # iterate over all agents
-    #     for agent in self.schedule.agents: #todo: is this in random order?
-    #
-    #         # calculate number of encounters won
-    #         agent.L = self.calculate_L(total_num_agents, agent.dominance)
-    #
-    #         # # calculate route with for loops
-    #         # self.calculate_route_agent_for_loops(agent, num_agents_on_patches)
-    #
-    #         m0 = 0.6
-    #         m1 = -0.008
-    #
-    #         # calculate route with matrix multiplication for time steps
-    #
-    #         self.calculate_route_agent_matrices(agent, num_agents_on_patches, m0, m1)
-    #
-    #         # self.calculate_route_agent_for_loops(agent, num_agents_on_patches, m0, m1)
 
 
 
