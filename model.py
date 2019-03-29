@@ -164,7 +164,7 @@ class OystercatcherModel(Model):
 
             # calculate route with matrix multiplication for time steps
 
-            # self.calculate_route_agent_matrices(agent, num_agents_on_patches, m0, m1)
+            self.calculate_route_agent_matrices(agent, num_agents_on_patches, m0, m1)
 
             # self.calculate_route_agent_for_loops(agent, num_agents_on_patches, m0, m1)
 
@@ -214,7 +214,7 @@ class OystercatcherModel(Model):
     def calculate_route_agent_matrices(self, agent, num_agents_all_patches, m0, m1):
         """ Calculate route for agent (for all timesteps via matrix multiplication to speed code up a bit.
         """
-        # ONLY take availability array for one tidal !!!!! todo VERY IMPORTANT
+        # ONLY take availability array for one tidal !!!!! todo:: VERY IMPORTANT
 
         # get index patch max_intake
         available_prey = np.multiply(self.availability, [self.prey])
