@@ -31,12 +31,12 @@ class Bird:
         # get total intake over time step
         total_captured_num_mussels = capture_rate * self.model.resolution_min * 60
         print("total_capt_num_mussels", total_captured_num_mussels)
-        intake_dry_weight = intake_rate * self.model.resolution_min * 60
+        intake_dry_weight = intake_rate * self.model.resolution_min * 60 # gebruiken voor energy storage
 
         # apply death #todo: should this be above eat?
 
         # deplete prey on patch
-        self.model.prey[self.pos] -= total_captured_num_mussels/1 # todo: patch area (daar moeten we door delen)
+        self.model.prey[self.pos] -= total_captured_num_mussels/ self.model.patch_areas[self.pos]
 
 
         # update stomach and energy reserves

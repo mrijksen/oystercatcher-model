@@ -29,3 +29,14 @@ def get_random_prey(params):
     """
     return np.array([random.randint(params["min_prey"], params["max_prey"])
                      for x in range(params["num_patches"])], dtype=float)
+
+def get_random_area(params):
+    """
+    Returns random array with areas between min_area and max_area for
+    given number of patches
+    :param params:
+    :return:
+    """
+    return np.array([random.randint(params["min_area"], params["max_area"])
+                     for x in range(params["num_patches"])])
+

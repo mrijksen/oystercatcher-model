@@ -16,8 +16,11 @@ def initiate_model(params=params):
     # availability for all patches and all time steps
     availability = data.get_random_availability(params)
 
+    # area for all patches
+    area_of_patches = data.get_random_area(params)
+
     # instantiate model
-    model = OystercatcherModel(params, init_prey, availability)
+    model = OystercatcherModel(params, init_prey, availability, area_of_patches)
     return model
 
 

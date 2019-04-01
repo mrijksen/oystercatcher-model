@@ -71,7 +71,7 @@ class Model:
 
 class OystercatcherModel(Model):
 
-    def __init__(self, params, init_prey, availability):
+    def __init__(self, params, init_prey, availability, patch_areas):
         """ Create a new model with given parameters
         :param init_prey: list with initial prey on patches #todo: divide in diff prey
         :param availability: array with availability on all patches for all t
@@ -99,8 +99,11 @@ class OystercatcherModel(Model):
         self.num_steps = self.get_steps(self.num_tidal_cycles, self.minutes_in_tidal_cycle, self.resolution_min)
         self.steps_per_tidal_cycle = self.get_steps(1, self.minutes_in_tidal_cycle, self.resolution_min)
 
+        # Patches characteristics
         # array with number of agents on every patch
-        self.num_agents_on_patches = np.zeros(self.num_patches, dtype=int)
+        self.num_agents_on_patches = np.zeros(self.num_patches, dtype=int) #todo: misschien overbodig?
+        self.patch_areas = patch_areas
+        self.agents_on_patches = [[] for _ in range(self.num_patches)] #todo: kan dit misschien sneller?
 
         # use schedule from schedule.py that randomly activates agents
         self.schedule = RandomActivation(self)
