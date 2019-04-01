@@ -1,0 +1,10 @@
+{
+  "init_birds" : 2,
+  "num_patches" : 2,
+  "min_prey" : 0,
+  "max_prey" : 200,
+  "num_tidal_cycles" : 1,
+  "minutes_in_tidal_cycle" : 720,
+  "resolution_min" : 10,
+  "mussel" : 1
+}
