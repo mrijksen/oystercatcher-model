@@ -28,4 +28,4 @@ def get_random_prey(params):
     The prey in the final array is the density of prey (# prey/ m2)
     """
     return np.array([random.randint(params["min_prey"], params["max_prey"])
-                     for x in range(params["num_patches"])])
+                     for x in range(params["num_patches"])], dtype=float)

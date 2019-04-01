@@ -25,12 +25,19 @@ class Bird:
         # eat
         density_of_competitors = self.model.num_agents_on_patches[self.pos] - 1 #todo: dit moet nog gedeeld door area
 
-        intake_rate = self.intake_rate_mussel(self.model.prey[self.pos], self.model.init_mussel_weight,
+        capture_rate, intake_rate = self.intake_rate_mussel(self.model.prey[self.pos], self.model.init_mussel_weight,
                                               density_of_competitors)
+
+        # get total intake over time step
+        total_captured_num_mussels = capture_rate * self.model.resolution_min * 60
+        print("total_capt_num_mussels", total_captured_num_mussels)
+        intake_dry_weight = intake_rate * self.model.resolution_min * 60
 
         # apply death #todo: should this be above eat?
 
         # deplete prey on patch
+        self.model.prey[self.pos] -= total_captured_num_mussels/1 # todo: patch area (daar moeten we door delen)
+
 
         # update stomach and energy reserves
 
@@ -41,16 +48,13 @@ class Bird:
 
         Interference is derived from Stillman et al. (2000).
 
-        Final intake rate is in mg. 
+        Final intake rate is in mg.
         """
 
         # parameters
         local_dominance = 0 #todo: get local dominance for agent
         attack_rate = 0.00057 # mosselA in stillman
         max_intake_rate = self.maximal_intake_rate(prey_weight)
-
-        # todo: DUMMY
-        # density_competitors = 0
 
         # calculate capture rate
         capture_rate = self.functional_response_mussel(attack_rate, mussel_density, prey_weight, max_intake_rate)
@@ -60,8 +64,8 @@ class Bird:
 
         # final intake rate included interference
         final_intake_rate = dry_weight_intake_rate * self.interference_stillman(density_competitors, local_dominance)
-        print("final IR:", final_intake_rate)
-        return final_intake_rate
+        # print("final IR:", final_intake_rate)
+        return capture_rate, final_intake_rate
 
     @staticmethod
     def functional_response_mussel(attack_rate, mussel_density, prey_weight, max_intake_rate):
@@ -78,7 +82,7 @@ class Bird:
         # calculate handling time and capture rate
         handling_time = prey_weight / max_intake_rate
         capture_rate = attack_rate * mussel_density / (1 + attack_rate * handling_time * mussel_density)
-        print("capture_rate:", capture_rate)
+        # print("capture_rate:", capture_rate)
         return capture_rate
 
     @staticmethod
@@ -94,7 +98,7 @@ class Bird:
 
         # calculate plateau/max intake rate
         max_intake_rate = mussel_intake_rate_A * prey_weight ** mussel_intake_rate_B
-        print("max IR:", max_intake_rate)
+        # print("max IR:", max_intake_rate)
         return max_intake_rate
 
     @staticmethod #todo: moet dit in staticfunction?
@@ -117,6 +121,7 @@ class Bird:
         else:
             relative_intake_rate = 1
         return relative_intake_rate
+
 
 
 
