@@ -10,6 +10,10 @@ from agent import Bird
 import time
 import random
 
+from collections import defaultdict
+
+import data
+
 import numpy as np
 
 from numba import njit
@@ -67,8 +71,7 @@ class Model:
 
 class OystercatcherModel(Model):
 
-    def __init__(self, init_prey, availability, init_birds, num_tidal_cycles, mussel, resolution_min=10,
-                 minutes_in_tidal_cycle=720):
+    def __init__(self, params, init_prey, availability):
         """ Create a new model with given parameters
         :param init_prey: list with initial prey on patches #todo: divide in diff prey
         :param availability: array with availability on all patches for all t
@@ -82,26 +85,34 @@ class OystercatcherModel(Model):
         # set parameters #todo: zet sommige dingen in param file
         self.prey = init_prey
         self.availability = availability
-        self.init_birds = init_birds
-        self.mussel = mussel
+        self.init_birds = params["init_birds"]
+        self.mussel = params["mussel"]
+        self.num_patches = params["num_patches"]
+        self.init_mussel_weight = params["init_mussel_weight"]
 
         # tidal cycle parameters and total number of model steps
-        self.num_tidal_cycles = num_tidal_cycles
-        self.resolution_min = resolution_min # time step size
-        self.minutes_in_tidal_cycle = minutes_in_tidal_cycle # minutes in tidal cycle, 720 = 12 hours
-        self.num_steps = self.get_steps(num_tidal_cycles, self.minutes_in_tidal_cycle, self.resolution_min)
+        self.num_tidal_cycles = params["num_tidal_cycles"]
+        self.resolution_min = params["resolution_min"] # time step size
+        self.minutes_in_tidal_cycle = params["minutes_in_tidal_cycle"] # minutes in tidal cycle, 720 = 12 hours
+
+        # calculate number of time steps in total and in one tidal cycle
+        self.num_steps = self.get_steps(self.num_tidal_cycles, self.minutes_in_tidal_cycle, self.resolution_min)
         self.steps_per_tidal_cycle = self.get_steps(1, self.minutes_in_tidal_cycle, self.resolution_min)
+
+        # array with number of agents on every patch
+        self.num_agents_on_patches = np.zeros(self.num_patches, dtype=int)
 
         # use schedule from schedule.py that randomly activates agents
         self.schedule = RandomActivation(self)
 
         # todo: datacollector here
+        self.data = defaultdict(list)
 
         # create birds
         for i in range(self.init_birds):
 
             # give random initial position #todo: should be according to ideal distribution
-            pos = random.randrange(len(self.prey))
+            pos = random.randrange(self.num_patches)
 
             unique_id = self.next_id()
             dominance = unique_id # todo: should be taken from distribution/data
@@ -113,12 +124,17 @@ class OystercatcherModel(Model):
             bird = Bird(unique_id, pos, self, dominance, energy)
 
             # place and add to schedule todo: place agent on something
+            self.num_agents_on_patches[pos] += 1
             self.schedule.add(bird)
 
     def step(self):
         # print("\nNew model step")
+        for i in range(self.num_patches):
+            print((self.prey[i], self.num_agents_on_patches[i]))
 
-        print(self.schedule.agents)
+        # for agent in self.schedule.agents:
+        #     print(agent.unique_id)
+        # print(self.schedule.agents)
 
         # - we have to update prey decline for all time steps
 
@@ -126,20 +142,20 @@ class OystercatcherModel(Model):
         self.schedule.step()
 
         # collect data on patches and agents
-
+        # maak paar datacollectie functies en roep die aan
+        # maak defaultdict
 
     def run_model(self):
         print("Initial number birds: {}".format(self.init_birds))
 
         # simulate for given number of num_steps
         for i in range(self.num_steps):
-            # print(i)
+            print("step:", i)
             self.step()
-
         print("Final number of birds: {}".format(self.schedule.get_agent_count()))
 
     @staticmethod
-    def get_steps(num_tidal_cycles, minutes_in_tidal_cycle, resolution_min):
+    def get_steps(num_tidal_cycles, minutes_in_tidal_cycle, resolution_min): #todo: dit doen we dubbel (ook in data.py)
         """Helper method to calculate number of steps based on number of tidal cycles
         and resolution of model.
 
