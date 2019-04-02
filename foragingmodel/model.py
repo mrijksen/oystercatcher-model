@@ -103,7 +103,7 @@ class OystercatcherModel(Model):
         # array with number of agents on every patch
         self.num_agents_on_patches = np.zeros(self.num_patches, dtype=int) #todo: misschien overbodig?
         self.patch_areas = patch_areas
-        self.agents_on_patches = [[] for _ in range(self.num_patches)] #todo: kan dit misschien sneller?
+        self.agents_on_patches = [[] for _ in range(self.num_patches)] #todo: kan dit misschien sneller? met arrays?
 
         # use schedule from schedule.py that randomly activates agents
         self.schedule = RandomActivation(self)
@@ -126,6 +126,9 @@ class OystercatcherModel(Model):
             # instantiate class
             bird = Bird(unique_id, pos, self, dominance, energy)
 
+            # add agent to agent overview
+            self.agents_on_patches[bird.pos].append(bird)
+
             # place and add to schedule todo: place agent on something
             self.num_agents_on_patches[pos] += 1
             self.schedule.add(bird)
@@ -133,7 +136,9 @@ class OystercatcherModel(Model):
     def step(self):
         # print("\nNew model step")
         for i in range(self.num_patches):
-            print((self.prey[i], self.num_agents_on_patches[i]))
+            print("#####Patch:{} ######".format(i))
+            print("prey:", self.prey[i])
+            print("num_agents:", self.num_agents_on_patches[i])
 
         # for agent in self.schedule.agents:
         #     print(agent.unique_id)
@@ -153,7 +158,7 @@ class OystercatcherModel(Model):
 
         # simulate for given number of num_steps
         for i in range(self.num_steps):
-            print("step:", i)
+            print("\nstep:", i)
             self.step()
         print("Final number of birds: {}".format(self.schedule.get_agent_count()))
 

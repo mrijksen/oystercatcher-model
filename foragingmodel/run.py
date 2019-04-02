@@ -28,3 +28,5 @@ def initiate_model(params=params):
 model = initiate_model()
 model.run_model()
 
+# print([agent for agent in model.agents_on_patches[0] if agent.unique_id != 0])
+# print(model.agents_on_patches[0])

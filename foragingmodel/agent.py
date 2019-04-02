@@ -17,20 +17,28 @@ class Bird:
 
     def step(self): # todo:
         """A model step. Move, then eat. """
-        # print("Agent id:", self.unique_id, "Agent pos:", self.pos)
+        print("Agent id:", self.unique_id, "pos:", self.pos)
         # determine whether to move
 
             # in case we move, choose other patch
 
-        # eat
-        density_of_competitors = self.model.num_agents_on_patches[self.pos] - 1 #todo: dit moet nog gedeeld door area
 
+        # num of other agents and calculate local dominance
+        num_agents_on_patch, local_dominance = self.calculate_local_dominance(self.model)
+
+        # calculate competitor density
+        density_of_competitors = num_agents_on_patch / self.model.patch_areas[self.pos] #todo: in stillman is dit in ha
+
+
+        # capture and intake rate including interference todo: is dit beide nodig?
         capture_rate, intake_rate = self.intake_rate_mussel(self.model.prey[self.pos], self.model.init_mussel_weight,
-                                              density_of_competitors)
+                                              density_of_competitors, local_dominance) #todo: make mussel weight change
+        print("Intake rate: ", intake_rate)
+        print("capture rate", capture_rate)
 
         # get total intake over time step
         total_captured_num_mussels = capture_rate * self.model.resolution_min * 60
-        print("total_capt_num_mussels", total_captured_num_mussels)
+
         intake_dry_weight = intake_rate * self.model.resolution_min * 60 # gebruiken voor energy storage
 
         # apply death #todo: should this be above eat?
@@ -38,10 +46,13 @@ class Bird:
         # deplete prey on patch
         self.model.prey[self.pos] -= total_captured_num_mussels/ self.model.patch_areas[self.pos]
 
+        # print("Dominance: {}, L: {}, Intake Rate {}".format(self.dominance, self.))
+
 
         # update stomach and energy reserves
 
-    def intake_rate_mussel(self, mussel_density, prey_weight, density_competitors):
+
+    def intake_rate_mussel(self, mussel_density, prey_weight, density_competitors, local_dominance):
         """Calculate intake rate for mussel patch on Wadden Sea.
 
         Functional response is derived from WEBTICS.
@@ -52,20 +63,23 @@ class Bird:
         """
 
         # parameters
-        local_dominance = 0 #todo: get local dominance for agent
         attack_rate = 0.00057 # mosselA in stillman
         max_intake_rate = self.maximal_intake_rate(prey_weight)
 
-        # calculate capture rate
+        # interference intake reduction
+        interference = self.interference_stillman(density_competitors, local_dominance)
+
+        # calculate capture rate and include interference
         capture_rate = self.functional_response_mussel(attack_rate, mussel_density, prey_weight, max_intake_rate)
+        final_capture_rate = capture_rate * interference
 
         # calculate actual dry weight intake
         dry_weight_intake_rate = capture_rate * prey_weight
 
         # final intake rate included interference
-        final_intake_rate = dry_weight_intake_rate * self.interference_stillman(density_competitors, local_dominance)
+        final_intake_rate = dry_weight_intake_rate * interference
         # print("final IR:", final_intake_rate)
-        return capture_rate, final_intake_rate
+        return final_capture_rate, final_intake_rate
 
     @staticmethod
     def functional_response_mussel(attack_rate, mussel_density, prey_weight, max_intake_rate):
@@ -103,7 +117,7 @@ class Bird:
 
     @staticmethod #todo: moet dit in staticfunction?
     def interference_stillman(density_competitors, local_dominance):
-        """Helper function to calculate intake rate reduction as described in Stillman.
+        """Helper method to calculate intake rate reduction as described in Stillman.
         :return:
         """
 
@@ -121,6 +135,29 @@ class Bird:
         else:
             relative_intake_rate = 1
         return relative_intake_rate
+
+    def calculate_local_dominance(self, model):
+        """
+        Method that calculates local dominance (# of encounters won) for patch agent is currently on
+
+        Returns number of other agents on same patch and number of encounters won (L)
+        """
+
+        # find dominance of all agents on same patch (excluding self)
+        dominance_agents_same_patch = [agent.dominance for agent in model.agents_on_patches[self.pos]
+                                if agent.unique_id != self.unique_id]
+
+        # calculate number of encounters won
+        number_of_encounters = len(dominance_agents_same_patch)
+
+        if number_of_encounters == 0:
+            L = 0 #todo: klopt dit? ja want die andere term wordt toch 1 (van interference)
+        else:
+            agents_with_lower_dominance = [item for item in dominance_agents_same_patch if item < self.dominance] #todo: smaller then or equal?
+            L = (len(agents_with_lower_dominance) / number_of_encounters) * 100
+        return len(dominance_agents_same_patch), L
+
+
 
 
 

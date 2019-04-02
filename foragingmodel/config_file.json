@@ -1,8 +1,8 @@
 {
   "init_birds" : 2,
   "num_patches" : 2,
-  "min_prey" : 2,
-  "max_prey" : 2,
+  "min_prey" : 200,
+  "max_prey" : 200,
   "min_area" : 10,
   "max_area": 10,
   "num_tidal_cycles" : 1,
