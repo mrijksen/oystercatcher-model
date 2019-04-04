@@ -105,6 +105,9 @@ class OystercatcherModel(Model):
         self.patch_areas = patch_areas
         self.agents_on_patches = [[] for _ in range(self.num_patches)] #todo: kan dit misschien sneller? met arrays?
 
+        # keep track of time steps within current tidal cycle
+        self.time_in_cycle = None
+
         # use schedule from schedule.py that randomly activates agents
         self.schedule = RandomActivation(self)
 
@@ -134,11 +137,21 @@ class OystercatcherModel(Model):
             self.schedule.add(bird)
 
     def step(self):
+
+        # update time step within cycle
+        self.time_in_cycle = self.schedule.time % self.steps_per_tidal_cycle
+
+        # todo: bereken energy goal voor alle agents als nieuwe tidal cycle begint
+        # todo: Moet dit misschien in agent zelf? Of niet? Het moet voor alle agents gebeuren!
+        # if self.schedule.time % self.steps_per_tidal_cycle == 0:
+        #     print("New tidal cycle!", "schedule time: ", self.schedule.time)
+
+        print(self.time_in_cycle)
         # print("\nNew model step")
-        for i in range(self.num_patches):
-            print("#####Patch:{} ######".format(i))
-            print("prey:", self.prey[i])
-            print("num_agents:", self.num_agents_on_patches[i])
+        # for i in range(self.num_patches):
+            # print("#####Patch:{} ######".format(i))
+            # print("prey:", self.prey[i])
+            # print("num_agents:", self.num_agents_on_patches[i])
 
         # for agent in self.schedule.agents:
         #     print(agent.unique_id)
@@ -158,7 +171,7 @@ class OystercatcherModel(Model):
 
         # simulate for given number of num_steps
         for i in range(self.num_steps):
-            print("\nstep:", i)
+            print("\nstep:", i, "hours passed: ", (i * 10/60))
             self.step()
         print("Final number of birds: {}".format(self.schedule.get_agent_count()))
 

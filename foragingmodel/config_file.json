@@ -5,8 +5,8 @@
   "max_prey" : 200,
   "min_area" : 10,
   "max_area": 10,
-  "num_tidal_cycles" : 1,
-  "minutes_in_tidal_cycle" : 720,
+  "num_tidal_cycles" : 2,
+  "minutes_in_tidal_cycle" : 750,
   "resolution_min" : 10,
   "mussel" : 1,
   "init_mussel_weight" : 850

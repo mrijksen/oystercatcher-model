@@ -6,6 +6,10 @@ class Bird:
     Instantiations represent foraging oystercatchers
     """
 
+    # parameters that are same for every bird #
+    # max stomach content
+    max_stomach_content = 80 # g WtW
+
     def __init__(self, unique_id, pos, model, dominance, energy=None):
         self.unique_id = unique_id
         self.model = model
@@ -13,14 +17,29 @@ class Bird:
         self.energy = energy
         self.pos = pos
 
+        # variable indicating "when" agent starts foraging (time steps after start tidal cycle) todo: zet in mooie units
+        self.start_foraging = 3 * 60 / model.resolution_min # todo: let op dat je 0 wel meerekent! Nu na 3 uur (3.25u voor laagwater)
+
+        # stomach content
+        self.stomach_content = 0 # todo: waarmee initialiseren?
+
+        # weight todo: what initial weight?
+        self.weight = 500 # gram
+
         # todo: add stomach etc.
 
     def step(self): # todo:
         """A model step. Move, then eat. """
-        print("Agent id:", self.unique_id, "pos:", self.pos)
+        # print("Agent id:", self.unique_id, "pos:", self.pos)
         # determine whether to move
 
             # in case we move, choose other patch
+
+        # if new tidal cycle, calculate new energy goal
+
+        # start foraging:
+        if self.model.time_in_cycle == self.start_foraging:
+            print("start foraging now!")
 
 
         # num of other agents and calculate local dominance
@@ -33,8 +52,8 @@ class Bird:
         # capture and intake rate including interference todo: is dit beide nodig?
         capture_rate, intake_rate = self.intake_rate_mussel(self.model.prey[self.pos], self.model.init_mussel_weight,
                                               density_of_competitors, local_dominance) #todo: make mussel weight change
-        print("Intake rate: ", intake_rate)
-        print("capture rate", capture_rate)
+        # print("Intake rate: ", intake_rate)
+        # print("capture rate", capture_rate)
 
         # get total intake over time step
         total_captured_num_mussels = capture_rate * self.model.resolution_min * 60
@@ -125,8 +144,8 @@ class Bird:
 
         # parameters
         competitors_threshold = 0 # density of competitors above which interference occurs
-        a = 0.285 # parameters as described by Stillman 2000 (page 570) todo: now taken hammerers
-        b = -0.00127
+        a = 0.437 # parameters for stabbers as described by Stillman 1996
+        b = -0.00721 #todo: check 587 for threshold
 
         # calculate relative intake rate
         if density_competitors > competitors_threshold:
@@ -156,6 +175,38 @@ class Bird:
             agents_with_lower_dominance = [item for item in dominance_agents_same_patch if item < self.dominance] #todo: smaller then or equal?
             L = (len(agents_with_lower_dominance) / number_of_encounters) * 100
         return len(dominance_agents_same_patch), L
+
+    def calculate_energy_requirements(self, T_list):
+        """
+        Calculate energy requirements for coming tidal cycle.
+
+        Included are thermoregulation and metabolic requirements. Note: weight gain is not included.
+
+        Needs a list with temperature for coming time steps
+
+        Implementation uses same approach as in WEBTICS.
+        :return:
+        """
+
+        # parameters
+        thermo_a = 904      # kerstenpiersma 1987
+        thermo_b = 30.3
+        metabolic_a = 0.061 # zwartsenskerstenetal1996
+        metabolic_b = 1.489
+
+        for T in T_list: # todo: mss lookup table gebruiken ipv berekening?
+
+            # costs of thermoregulation #todo: dit is per dag, moet per tijdstap a resolution_min
+            E_t = thermo_a - T * thermo_b
+
+            # general required energy (for T > Tcrit)
+            E_m = metabolic_a * self.weight ** metabolic_b
+
+            # total energy requirement
+
+
+
+
 
 
 
