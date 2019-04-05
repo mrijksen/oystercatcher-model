@@ -90,6 +90,9 @@ class OystercatcherModel(Model):
         self.num_patches = params["num_patches"]
         self.init_mussel_weight = params["init_mussel_weight"]
 
+        self.temperature = params["temperature"] #todo: moet in data set komen
+        self.reference_weight_birds = params["reference_weight"] #todo: moet in data set komen
+
         # tidal cycle parameters and total number of model steps
         self.num_tidal_cycles = params["num_tidal_cycles"]
         self.resolution_min = params["resolution_min"] # time step size

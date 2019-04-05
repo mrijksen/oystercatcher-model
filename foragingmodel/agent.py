@@ -24,7 +24,7 @@ class Bird:
         self.stomach_content = 0 # todo: waarmee initialiseren?
 
         # weight todo: what initial weight?
-        self.weight = 500 # gram
+        self.weight = 450 # gram
 
         # todo: add stomach etc.
 
@@ -36,18 +36,23 @@ class Bird:
             # in case we move, choose other patch
 
         # if new tidal cycle, calculate new energy goal
+        T_list = [self.model.temperature] * self.model.steps_per_tidal_cycle
+
+        # determine energy goal at start of new tidal cycle
+        if self.model.time_in_cycle == 0:
+            print("Energy requirement 1 cycle:", self.energy_goal_coming_cycle(T_list))
 
         # start foraging:
         if self.model.time_in_cycle == self.start_foraging:
-            print("start foraging now!")
 
+
+            print("start foraging now!")
 
         # num of other agents and calculate local dominance
         num_agents_on_patch, local_dominance = self.calculate_local_dominance(self.model)
 
         # calculate competitor density
         density_of_competitors = num_agents_on_patch / self.model.patch_areas[self.pos] #todo: in stillman is dit in ha
-
 
         # capture and intake rate including interference todo: is dit beide nodig?
         capture_rate, intake_rate = self.intake_rate_mussel(self.model.prey[self.pos], self.model.init_mussel_weight,
@@ -176,34 +181,69 @@ class Bird:
             L = (len(agents_with_lower_dominance) / number_of_encounters) * 100
         return len(dominance_agents_same_patch), L
 
-    def calculate_energy_requirements(self, T_list):
+    def energy_requirements_one_time_step(self, T):
         """
-        Calculate energy requirements for coming tidal cycle.
+        Calculate energy requirements for one time step.
 
         Included are thermoregulation and metabolic requirements. Note: weight gain is not included.
 
-        Needs a list with temperature for coming time steps
+        Needs temperature for current time step
 
         Implementation uses same approach as in WEBTICS.
         :return:
         """
 
+        # conversion from day to time step
+        conversion = self.model.resolution_min / (24 * 60)
+
         # parameters
-        thermo_a = 904      # kerstenpiersma 1987
+        thermo_a = 904     # kerstenpiersma 1987 kJ/resolution_min
         thermo_b = 30.3
-        metabolic_a = 0.061 # zwartsenskerstenetal1996
+        metabolic_a = 0.061 # zwartsenskerstenetal1996 kJ/resolution_min
         metabolic_b = 1.489
 
-        for T in T_list: # todo: mss lookup table gebruiken ipv berekening?
+        # costs of thermoregulation for one time step # mss met lookup table? ipv elke keer berekenen?
+        E_t = (thermo_a - T * thermo_b) * conversion # kJ/resolution_min
 
-            # costs of thermoregulation #todo: dit is per dag, moet per tijdstap a resolution_min
-            E_t = thermo_a - T * thermo_b
+        # general required energy (for T > Tcrit) for one time step
+        E_m = (metabolic_a * self.weight ** metabolic_b) * conversion # kJ/conversion_min
 
-            # general required energy (for T > Tcrit)
-            E_m = metabolic_a * self.weight ** metabolic_b
+        # return final energy requirement
+        return max(E_t, E_m)
 
-            # total energy requirement
+    def energy_goal_coming_cycle(self, T_list): #todo: over 1 or 2 tidal cycles? 2 lijkt logisch, en handig als je dag en  nacht meeneemt
+        """
+        Method that calculates the energy goal of a bird for the coming tidal cycle.
 
+        :param T_list: Contains temperature for coming or previous tidal cycle
+        :return:
+        """
+
+        # parameters
+        deposition_efficiency = 0.75    # WEBTICS page 57
+        BodyGramEnergyCont = 34.295     # kJ/gram fat
+        BodyGramEnergyReq = 45.72666666 # kJ/gram (25% larger)
+
+        # determine energy for weight gain/loss
+        weight_difference = self.model.reference_weight_birds - self.weight
+
+        # todo: this weight energy does not take into account time step size. Is this a bad thing?
+        # todo: I don't think so, Egoal will be high but then they will eat as much as possible (as should)
+        # todo: Turn weight data into weight per tidal cycle.
+        if weight_difference > 0:
+            weight_energy_requirement = BodyGramEnergyReq * weight_difference
+        elif weight_difference < 0:
+            weight_energy_requirement = BodyGramEnergyCont * weight_difference
+        else:
+            weight_energy_requirement = 0
+
+        energy_goal = weight_energy_requirement # todo: unnessesary
+
+        # calculate normal energy requirements
+        for T in T_list: # T_list should be as long as steps in tidal cycle
+
+            energy_goal += self.energy_requirements_one_time_step(T)
+        return energy_goal
 
 
 

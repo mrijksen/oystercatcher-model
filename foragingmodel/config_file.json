@@ -9,5 +9,7 @@
   "minutes_in_tidal_cycle" : 750,
   "resolution_min" : 10,
   "mussel" : 1,
-  "init_mussel_weight" : 850
+  "init_mussel_weight" : 850,
+  "temperature": 10,
+  "reference_weight": 500
 }
