@@ -8,7 +8,13 @@ class Bird:
 
     # parameters that are same for every bird #
     # max stomach content
-    max_stomach_content = 80 # g WtW
+    max_stomach_content = 80 # g WtW KerstenVisser1996
+
+    # maximal digestive rate
+    max_digestive_rate = 378.72 # WtW / day KerstenVisser1996
+
+    # fraction of digested prey actually taken up by birds
+    fraction_taken_up = 0.85 # Speakman1987, KerstenVisser1996, KerstenPiersma1987, ZwartsBlomert1996
 
     def __init__(self, unique_id, pos, model, dominance, energy=None):
         self.unique_id = unique_id
@@ -35,15 +41,24 @@ class Bird:
 
             # in case we move, choose other patch
 
-        # if new tidal cycle, calculate new energy goal
-        T_list = [self.model.temperature] * self.model.steps_per_tidal_cycle
-
         # determine energy goal at start of new tidal cycle
         if self.model.time_in_cycle == 0:
-            print("Energy requirement 1 cycle:", self.energy_goal_coming_cycle(T_list))
+            print("Energy requirement 1 cycle:", self.energy_goal_coming_cycle(self.model.temperature))
 
         # start foraging:
-        if self.model.time_in_cycle == self.start_foraging:
+        if self.model.time_in_cycle >= self.start_foraging:
+
+            # put this in def foraging ():
+                # check if Egoal is reached
+                    # if reached, don't forage (rest of tidal cycle?)
+
+                # check stomach content
+                # determine intake rate (if stomach full: IR = min(..,..)
+
+                # update Egoal and eventual weight gain/loss
+
+                # check if at end of tidal cycle Egoal is reached
+
 
 
             print("start foraging now!")
@@ -211,11 +226,11 @@ class Bird:
         # return final energy requirement
         return max(E_t, E_m)
 
-    def energy_goal_coming_cycle(self, T_list): #todo: over 1 or 2 tidal cycles? 2 lijkt logisch, en handig als je dag en  nacht meeneemt
+    def energy_goal_coming_cycle(self, mean_T): #todo: over 1 or 2 tidal cycles? 2 lijkt logisch, en handig als je dag en  nacht meeneemt
         """
         Method that calculates the energy goal of a bird for the coming tidal cycle.
 
-        :param T_list: Contains temperature for coming or previous tidal cycle
+        :param mean_T: Contains mean temperature for coming or previous tidal cycle TODO: prev or coming?
         :return:
         """
 
@@ -236,14 +251,14 @@ class Bird:
             weight_energy_requirement = BodyGramEnergyCont * weight_difference
         else:
             weight_energy_requirement = 0
-
-        energy_goal = weight_energy_requirement # todo: unnessesary
+        energy_goal = weight_energy_requirement # todo: unnessesary variable just for clarity
 
         # calculate normal energy requirements
-        for T in T_list: # T_list should be as long as steps in tidal cycle
-
-            energy_goal += self.energy_requirements_one_time_step(T)
+        for t in range(self.model.steps_per_tidal_cycle):
+            energy_goal += self.energy_requirements_one_time_step(mean_T)
         return energy_goal
+
+    def energy_assimilation
 
 
 
