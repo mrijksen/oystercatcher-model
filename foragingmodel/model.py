@@ -92,7 +92,8 @@ class OystercatcherModel(Model):
         # prey characteristics
         self.init_mussel_dry_weight = params["init_mussel_dry_weight"]
         self.init_mussel_wet_weight = params["init_mussel_wet_weight"]
-        AFDWenergyContent 
+        self.AFDWenergyContent = 22.5 # kJ/gram todo: in parameter file
+        self.RatioAFDWtoWet = 0.16 # afdw per gram wet weight
 
         self.temperature = params["temperature"] #todo: moet in data set komen
         self.reference_weight_birds = params["reference_weight"] #todo: moet in data set komen
@@ -153,7 +154,7 @@ class OystercatcherModel(Model):
         # if self.schedule.time % self.steps_per_tidal_cycle == 0:
         #     print("New tidal cycle!", "schedule time: ", self.schedule.time)
 
-        print(self.time_in_cycle)
+        # print(self.time_in_cycle)
         # print("\nNew model step")
         # for i in range(self.num_patches):
             # print("#####Patch:{} ######".format(i))
@@ -178,7 +179,7 @@ class OystercatcherModel(Model):
 
         # simulate for given number of num_steps
         for i in range(self.num_steps):
-            print("\nstep:", i, "hours passed: ", (i * 10/60))
+            # print("\nstep:", i, "hours passed: ", (i * 10/60))
             self.step()
         print("Final number of birds: {}".format(self.schedule.get_agent_count()))
 

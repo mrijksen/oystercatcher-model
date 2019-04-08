@@ -2,6 +2,8 @@ import data
 
 from model import OystercatcherModel
 
+import matplotlib.pyplot as plt
+
 
 params = data.get_params()
 
@@ -28,5 +30,7 @@ def initiate_model(params=params):
 model = initiate_model()
 model.run_model()
 
+plt.plot(model.schedule.agents[0].weight_throughout_cycle)
+plt.show()
 # print([agent for agent in model.agents_on_patches[0] if agent.unique_id != 0])
 # print(model.agents_on_patches[0])
