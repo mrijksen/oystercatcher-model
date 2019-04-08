@@ -88,7 +88,11 @@ class OystercatcherModel(Model):
         self.init_birds = params["init_birds"]
         self.mussel = params["mussel"]
         self.num_patches = params["num_patches"]
-        self.init_mussel_weight = params["init_mussel_weight"]
+
+        # prey characteristics
+        self.init_mussel_dry_weight = params["init_mussel_dry_weight"]
+        self.init_mussel_wet_weight = params["init_mussel_wet_weight"]
+        AFDWenergyContent 
 
         self.temperature = params["temperature"] #todo: moet in data set komen
         self.reference_weight_birds = params["reference_weight"] #todo: moet in data set komen

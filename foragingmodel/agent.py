@@ -20,7 +20,7 @@ class Bird:
         self.unique_id = unique_id
         self.model = model
         self.dominance = dominance
-        self.energy = energy
+        self.energy = energy #todo: remove this variable
         self.pos = pos
 
         # variable indicating "when" agent starts foraging (time steps after start tidal cycle) todo: zet in mooie units
@@ -31,6 +31,18 @@ class Bird:
 
         # weight todo: what initial weight?
         self.weight = 450 # gram
+
+        # energy goal
+        self.energy_goal = None
+
+        # energy already foraged
+        self.energy_gain = 0
+
+        # stomach content en digestive rate
+        self.max_stomach_content = 80 # todo: put in parameter file
+        self.max_digestive_rate = 378.72 # WtW / day KerstenVisser1996
+
+
 
         # todo: add stomach etc.
 
@@ -43,10 +55,16 @@ class Bird:
 
         # determine energy goal at start of new tidal cycle
         if self.model.time_in_cycle == 0:
+            self.energy_goal = self.energy_goal_coming_cycle(self.model.temperature) #todo: what temperature?
             print("Energy requirement 1 cycle:", self.energy_goal_coming_cycle(self.model.temperature))
+
 
         # start foraging:
         if self.model.time_in_cycle >= self.start_foraging:
+
+
+
+
 
             # put this in def foraging ():
                 # check if Egoal is reached
@@ -91,14 +109,14 @@ class Bird:
         # update stomach and energy reserves
 
 
-    def intake_rate_mussel(self, mussel_density, prey_weight, density_competitors, local_dominance):
+    def intake_rate_mussel(self, mussel_density, prey_dry_weight, prey_wet_weight, density_competitors, local_dominance):
         """Calculate intake rate for mussel patch on Wadden Sea.
 
         Functional response is derived from WEBTICS.
 
         Interference is derived from Stillman et al. (2000).
 
-        Final intake rate is in mg.
+        Final intake rate is in mg/s.
         """
 
         # parameters
@@ -113,12 +131,15 @@ class Bird:
         final_capture_rate = capture_rate * interference
 
         # calculate actual dry weight intake
-        dry_weight_intake_rate = capture_rate * prey_weight
+        dry_weight_intake_rate = capture_rate * prey_dry_weight #todo: dit kan er misschien wel uit
+
+        # calculate actual wet weight intake
+        wet_weight_intake_rate = capture_rate * prey_wet_weight #todo moet dit erin?
 
         # final intake rate included interference
         final_intake_rate = dry_weight_intake_rate * interference
         # print("final IR:", final_intake_rate)
-        return final_capture_rate, final_intake_rate
+        return final_capture_rate, final_intake_rate, wet_weight_intake_rate
 
     @staticmethod
     def functional_response_mussel(attack_rate, mussel_density, prey_weight, max_intake_rate):
@@ -258,21 +279,53 @@ class Bird:
             energy_goal += self.energy_requirements_one_time_step(mean_T)
         return energy_goal
 
-    def energy_assimilation
+    def foraging(self):
 
 
 
+        # check if energy goal is met
+        if self.energy_gain < self.energy_goal:
+
+            ### calculate intake rate on patch ### todo: dit is dus alleen voor mussel patch
+
+            # num of other agents and calculate local dominance
+            num_agents_on_patch, local_dominance = self.calculate_local_dominance(self.model) #todo: num_agents moet geupdate worden
+
+            # calculate competitor density
+            density_of_competitors = num_agents_on_patch / self.model.patch_areas[self.pos]  # todo: in stillman is dit in ha
+
+            # capture and intake rate including interference todo: voeg andere IRs toe afhankelijk van dieet
+            patch_capture_rate, patch_intake_rate_dry_weight, patch_intake_rate_wet_weight = \
+                self.intake_rate_mussel(self.model.prey[self.pos], self.model.init_mussel_dry_weight,
+                                        self.model.init_mussel_wet_weight,
+                                        self.model.density_of_competitors, local_dominance)  # todo: make mussel weight change
+
+            # get total capture rate/IRs in one time step todo: dit misschien in functie (intake_rate_mussel) zetten?
+            conversion_s_to_timestep = self.model.resolution_min * 60
+            total_patch_captured_num_mussels = patch_capture_rate * conversion_s_to_timestep # todo: ook voor andere prey
+            total_patch_intake_dry_weight = patch_intake_rate_dry_weight * conversion_s_to_timestep
+            total_patch_intake_wet_weight = patch_intake_rate_wet_weight * conversion_s_to_timestep #todo: moet dit allemaal berekent worden?
+
+            # check stomach space left
+            stomach_left = self.max_stomach_content - self.stomach_content
+
+            # calculate possible intake based on stomach left and digestive rate
+            possible_wtw_intake = self.max_digestive_rate * conversion_s_to_timestep + stomach_left
+
+            # intake is minimum of possible intake and intake achievable on patch
+            intake = min(total_patch_intake_wet_weight, possible_wtw_intake) # WtW intake
+
+            # num prey captured
+            num_prey_captured = intake / self.model.init_mussel_wet_weight #todo: hier de leftover fraction?
+
+            # update patch density
+            self.model.prey[self.pos] -= num_prey_captured / self.model.patch_areas[self.pos]
+
+            # calculate energy assimilated todo: in aparte functie? & is nu ook alleen voor mussel
+            E_assimilated = num_prey_captured * self.model.init_mussel_dry_weight # t
 
 
 
-
-
-
-
-
-
-
-
-
-
+            # update Egoal
+            self.energy_goal -=
 
