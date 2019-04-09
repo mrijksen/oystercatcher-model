@@ -8,7 +8,7 @@ class Bird:
     max_stomach_content = 80 # g WtW KerstenVisser1996
 
     # maximal digestive rate
-    max_digestive_rate = 378.72 # WtW / day KerstenVisser1996
+    # max_digestive_rate = 378.72 # WtW / day KerstenVisser1996
 
     # fraction of digested prey actually taken up by birds
     fraction_taken_up = 0.85 # Speakman1987, KerstenVisser1996, KerstenPiersma1987, ZwartsBlomert1996
@@ -21,7 +21,8 @@ class Bird:
         self.pos = pos
 
         # variable indicating "when" agent starts foraging (time steps after start tidal cycle) todo: zet in mooie units
-        self.start_foraging = 3 * 60 / model.resolution_min # todo: let op dat je 0 wel meerekent! Nu na 3 uur (3.25u voor laagwater)
+        # self.start_foraging = 3 * 60 / model.resolution_min # todo: let op dat je 0 wel meerekent! Nu na 3 uur (3.25u voor laagwater)
+        self.start_foraging = 0
 
         # stomach content
         self.stomach_content = 0 # todo: waarmee initialiseren?
@@ -44,7 +45,7 @@ class Bird:
         self.deposition_efficiency = 0.75  # WEBTICS page 57
         self.BodyGramEnergyCont = 34.295  # kJ/gram fat
         self.BodyGramEnergyReq = 45.72666666  # kJ/gram (25% larger)
-        self.minimum_weight = 400 # g page 88 webtics
+        self.minimum_weight = 400 # todo
 
         # get some data
         self.weight_throughout_cycle = []
@@ -55,52 +56,56 @@ class Bird:
     def step(self): # todo:
         """A model step. Move, then eat. """
         print("Agent id:", self.unique_id, "pos:", self.pos, "weight:", self.weight)
-        # determine whether to move
-
-            # in case we move, choose other patch
-
-        # determine energy goal at start of new tidal cycle
-        if self.model.time_in_cycle == 0:
-            self.energy_goal = self.energy_goal_coming_cycle(self.model.temperature) #todo: what temperature?
-            self.energy_gain = 0
-            # print("Energy requirement 1 cycle:", self.energy_goal_coming_cycle(self.model.temperature))
-
-        if self.model.time_in_cycle >= self.start_foraging: #todo: stop foraging if egoal is met
-            energy_assimilated, intake_wtw = self.consume_mussel_diet()
-
-            # update energy gain
-            self.energy_gain += energy_assimilated
-
-            # update stomach
-            self.stomach_content += intake_wtw
-        else:
-            energy_assimilated = 0 # todo: is dit netjes zo?
-
-        # digestion
-        self.stomach_content -= self.max_digestive_rate # TODO DIT MOET NAAR TIJDSTAP OMGEZET
 
         # get some data
         self.stomach_content_list.append(self.stomach_content)
         self.weight_throughout_cycle.append(self.weight)
+
+        # determine energy goal at start of new tidal cycle
+        if self.model.time_in_cycle == 0:
+            self.energy_goal = self.energy_goal_coming_cycle(self.model.temperature) #todo: what temperature?
+            # print("energy goal per step", self.energy_goal / self.model.steps_per_tidal_cycle)
+            self.energy_gain = 0
+            # print("Energy requirement 1 cycle:", self.energy_goal_coming_cycle(self.model.temperature))
+
+        if self.model.time_in_cycle >= self.start_foraging: #todo: stop foraging if egoal is met
+            wtw_intake = self.consume_mussel_diet()
+
+            # update stomach content (add wet weight)
+            self.stomach_content += wtw_intake
+        else:
+            wtw_intake = 0
+
+        # only digested food is assimilated, if there is less in stomach assimilate rest #todo: min nemen?
+        energy_assimilated = (min(self.max_digestive_rate,
+                             self.stomach_content)) * self.model.RatioAFDWtoWet * self.model.AFDWenergyContent  # todo: fractiontakenup?
+
+        # update energy gain (everything that is eaten)
+        self.energy_gain += wtw_intake * self.model.RatioAFDWtoWet * self.model.AFDWenergyContent
+
+        # digestion
+        self.stomach_content -= min(self.max_digestive_rate, self.stomach_content) # TODO DIT MOET NAAR TIJDSTAP OMGEZET
 
         # energy consumption
         energy_consumed = self.energy_requirements_one_time_step(self.model.temperature)
 
         # update weight todo: do this every time step?
         energy_difference = energy_assimilated - energy_consumed
-        # print("Energy assimilated:", energy_assimilated, "Energy Consumed", energy_consumed)
+        print("Energy assimilated:", energy_assimilated, "Energy Consumed", energy_consumed)
+        print("Energy intake", wtw_intake * self.model.RatioAFDWtoWet * self.model.AFDWenergyContent)
 
         if energy_difference < 0:
-            # print("weight loss", energy_difference / self.BodyGramEnergyCont)
+            print("weight loss", energy_difference / self.BodyGramEnergyCont)
             self.weight += energy_difference / self.BodyGramEnergyCont
         elif energy_difference > 0:
-            # print("weight gain", energy_difference/self.BodyGramEnergyCont)
+            print("weight gain", energy_difference/self.BodyGramEnergyCont)
             self.weight += energy_difference / self.BodyGramEnergyCont
 
         # apply death if weight becomes too low
-        if self.weight < 350: #todo: this should be something else maybe
+        if self.weight < 400: #todo: this should be something else maybe
             self.model.schedule.remove(self)
         # print("Weight;", self.weight, "Egain:", self.energy_gain)
+
     def intake_rate_mussel(self, mussel_density, prey_dry_weight, prey_wet_weight, density_competitors, local_dominance):
         """Calculate intake rate for mussel patch on Wadden Sea.
 
@@ -268,9 +273,8 @@ class Bird:
         energy_goal = weight_energy_requirement # todo: unnessesary variable just for clarity
 
         # calculate normal energy requirements
-        for t in range(self.model.steps_per_tidal_cycle):
-            energy_goal += self.energy_requirements_one_time_step(mean_T)
-        # print(energy_goal - weight_energy_requirement, "energy without weight")
+        energy_goal += self.energy_requirements_one_time_step(mean_T) * self.model.steps_per_tidal_cycle
+
         return energy_goal
 
     def consume_mussel_diet(self):
@@ -279,14 +283,13 @@ class Bird:
 
         Returns the energy (kJ) assimilated and the wet weight consumed (g).
         """
-
+        #todo: ze doen nu hele tijdstap hetzelfde, moeten iets toevoegen zodat ze deel van tijdstap kunnen forageren
         # check if energy goal is met
-        # print("energy gain", self.energy_gain)
-        # print("energy goal", self.energy_goal)
+        print("energy gain", self.energy_gain)
+        print("energy goal", self.energy_goal)
         if self.energy_gain < self.energy_goal:
 
-            # calculate intake rate on patch # todo: dit is dus alleen voor mussel patch
-
+            print( "Egain < Egoal ")
             # num of other agents and calculate local dominance
             num_agents_on_patch, local_dominance = self.calculate_local_dominance(self.model) #todo: num_agents moet geupdate worden
 
@@ -321,12 +324,7 @@ class Bird:
 
             # update patch density
             self.model.prey[self.pos] -= num_prey_captured / self.model.patch_areas[self.pos]
-
-            # calculate energy assimilated todo: in aparte functie? & is nu ook alleen voor mussel
-            E_assimilated = intake_wtw * self.model.RatioAFDWtoWet * self.model.AFDWenergyContent #todo: fractiontakenup?
-
         else:
-            E_assimilated = 0
             intake_wtw = 0
-        return E_assimilated, intake_wtw
+        return intake_wtw
 

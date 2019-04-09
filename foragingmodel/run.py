@@ -30,7 +30,15 @@ def initiate_model(params=params):
 model = initiate_model()
 model.run_model()
 
-plt.plot(model.schedule.agents[0].weight_throughout_cycle)
+print(model.schedule.agents[0].weight_throughout_cycle)
+
+plt.figure(1)
+plt.plot(model.schedule.agents[0].weight_throughout_cycle, label="weight")
+plt.legend()
+plt.figure(2)
+plt.plot(model.schedule.agents[0].stomach_content_list, label="stomach contents")
+# plt.axhline(500, c="r", label="reference weight")
+plt.legend()
 plt.show()
 # print([agent for agent in model.agents_on_patches[0] if agent.unique_id != 0])
 # print(model.agents_on_patches[0])

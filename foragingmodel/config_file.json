@@ -1,5 +1,5 @@
 {
-  "init_birds" : 2,
+  "init_birds" : 1,
   "num_patches" : 2,
   "min_prey" : 100000,
   "max_prey" : 100000,
@@ -12,5 +12,5 @@
   "init_mussel_dry_weight" : 850,
   "init_mussel_wet_weight": 1000,
   "temperature": 10,
-  "reference_weight": 500
+  "reference_weight": 400
 }
