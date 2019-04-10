@@ -16,7 +16,7 @@ import numpy as np
 
 class OystercatcherModel(Model):
 
-    def __init__(self, params, init_prey, availability, patch_areas):
+    def __init__(self, params, prey_densities, availability, patch_areas):
         """ Create a new model with given parameters
         :param init_prey: list with initial prey on patches #todo: divide in diff prey
         :param availability: array with availability on all patches for all t
@@ -28,7 +28,7 @@ class OystercatcherModel(Model):
         super().__init__()
 
         # set parameters #todo: zet sommige dingen in param file
-        self.prey = init_prey
+        self.prey = prey_densities
         self.availability = availability
         self.init_birds = params["init_birds"]
         self.mussel = params["mussel"]
@@ -94,8 +94,6 @@ class OystercatcherModel(Model):
         # update time step within cycle
         self.time_in_cycle = self.schedule.time % self.steps_per_tidal_cycle
 
-        # todo: bereken energy goal voor alle agents als nieuwe tidal cycle begint
-        # todo: Moet dit misschien in agent zelf? Of niet? Het moet voor alle agents gebeuren!
         # if self.schedule.time % self.steps_per_tidal_cycle == 0:
         #     print("New tidal cycle!", "schedule time: ", self.schedule.time)
 
@@ -105,12 +103,6 @@ class OystercatcherModel(Model):
             # print("#####Patch:{} ######".format(i))
             # print("prey:", self.prey[i])
             # print("num_agents:", self.num_agents_on_patches[i])
-
-        # for agent in self.schedule.agents:
-        #     print(agent.unique_id)
-        # print(self.schedule.agents)
-
-        # - we have to update prey decline for all time steps
 
         # execute model.step (move agents and let them eat) todo: pas schedule aan
         self.schedule.step()
@@ -137,23 +129,11 @@ class OystercatcherModel(Model):
         """
         return int((num_tidal_cycles * minutes_in_tidal_cycle) / resolution_min)
 
-
-    @staticmethod #todo: this should be L on current patch, not in total system! should we put this in agents.py?
-    def calculate_L(total_num_agents, dominance):
-        """ Returns total number of encounters won (in percentages) based on number
-        of agents currently in system and an agent's dominance"""
-        if total_num_agents > 1:
-            return (total_num_agents - dominance) * 100 / (total_num_agents - 1)
-        else:
-            return 100 #todo: should this be 100?
-
-
-
-
-
-
-
-
-
-
-
+    # @staticmethod #todo: this should be L on current patch, not in total system! should we put this in agents.py?
+    # def calculate_L(total_num_agents, dominance):
+    #     """ Returns total number of encounters won (in percentages) based on number
+    #     of agents currently in system and an agent's dominance"""
+    #     if total_num_agents > 1:
+    #         return (total_num_agents - dominance) * 100 / (total_num_agents - 1)
+    #     else:
+    #         return 100 #todo: should this be 100?

@@ -13,7 +13,8 @@ def initiate_model(params=params):
     """Instantiate model class"""
 
     # initial prey for all patches
-    init_prey = data.get_random_prey(params)
+    # init_prey = data.get_random_prey(params)
+    prey = data.create_random_prey(params)
 
     # availability for all patches and all time steps
     availability = data.get_random_availability(params)
@@ -22,7 +23,7 @@ def initiate_model(params=params):
     area_of_patches = data.get_random_area(params)
 
     # instantiate model
-    model = OystercatcherModel(params, init_prey, availability, area_of_patches)
+    model = OystercatcherModel(params, prey, availability, area_of_patches)
     return model
 
 
