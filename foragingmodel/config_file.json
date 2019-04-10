@@ -1,8 +1,8 @@
 {
   "init_birds" : 1,
   "num_patches" : 2,
-  "min_prey" : 100000,
-  "max_prey" : 100000,
+  "min_prey" : 10000000,
+  "max_prey" : 10000000,
   "min_area" : 10,
   "max_area": 10,
   "num_tidal_cycles" : 3,
@@ -10,7 +10,7 @@
   "resolution_min" : 10,
   "mussel" : 1,
   "init_mussel_dry_weight" : 850,
-  "init_mussel_wet_weight": 1000,
+  "init_mussel_wet_weight": 5312.5,
   "temperature": 10,
   "reference_weight": 400
 }

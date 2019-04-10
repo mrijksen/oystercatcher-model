@@ -3,55 +3,40 @@ class Bird:
     Instantiations represent foraging oystercatchers
     """
 
-    # parameters that are same for every bird #
-    # max stomach content
-    max_stomach_content = 80 # g WtW KerstenVisser1996
+    def __init__(self, unique_id, pos, model, dominance):
 
-    # maximal digestive rate
-    # max_digestive_rate = 378.72 # WtW / day KerstenVisser1996
-
-    # fraction of digested prey actually taken up by birds
-    fraction_taken_up = 0.85 # Speakman1987, KerstenVisser1996, KerstenPiersma1987, ZwartsBlomert1996
-
-    def __init__(self, unique_id, pos, model, dominance, energy=None):
+        # standard params
         self.unique_id = unique_id
         self.model = model
+
+        # this should be read from data file
         self.dominance = dominance
-        self.energy = energy #todo: remove this variable
         self.pos = pos
 
         # variable indicating "when" agent starts foraging (time steps after start tidal cycle) todo: zet in mooie units
         # self.start_foraging = 3 * 60 / model.resolution_min # todo: let op dat je 0 wel meerekent! Nu na 3 uur (3.25u voor laagwater)
         self.start_foraging = 0
 
-        # stomach content
+        # stomach, weight, energy goal
         self.stomach_content = 0 # todo: waarmee initialiseren?
-
-        # weight todo: what initial weight?
         self.weight = 400
-
-        # energy goal
         self.energy_goal = None
+        self.energy_gain = 0 # energy already foraged
 
-        # energy already foraged
-        self.energy_gain = 0
-
-        # stomach content en digestive rate
-        self.max_stomach_content = 80  # g WtW todo: put in parameter file
+        # stomach content en digestive rate todo: put in parameter file
+        self.max_stomach_content = 80  # g WtW
         max_digestive_rate = 0.263 # WtW / min KerstenVisser1996
-        self.max_digestive_rate = max_digestive_rate * 10
-
-        # todo: in parameter file
+        self.max_digestive_rate = max_digestive_rate * 10 # digestive rate per 10 minutes
         self.deposition_efficiency = 0.75  # WEBTICS page 57
         self.BodyGramEnergyCont = 34.295  # kJ/gram fat
         self.BodyGramEnergyReq = 45.72666666  # kJ/gram (25% larger)
         self.minimum_weight = 400 # todo
+        self.max_stomach_content = 80 # g WtW KerstenVisser1996
+        self.fraction_taken_up = 0.85 # Speakman1987, KerstenVisser1996, KerstenPiersma1987, ZwartsBlomert1996 #todo: moet er nog in
 
         # get some data
         self.weight_throughout_cycle = []
         self.stomach_content_list = []
-
-        # todo: add stomach etc.
 
     def step(self): # todo:
         """A model step. Move, then eat. """
@@ -68,6 +53,7 @@ class Bird:
             self.energy_gain = 0
             # print("Energy requirement 1 cycle:", self.energy_goal_coming_cycle(self.model.temperature))
 
+        # foraging
         if self.model.time_in_cycle >= self.start_foraging: #todo: stop foraging if egoal is met
             wtw_intake = self.consume_mussel_diet()
 
@@ -76,7 +62,7 @@ class Bird:
         else:
             wtw_intake = 0
 
-        # only digested food is assimilated, if there is less in stomach assimilate rest #todo: min nemen?
+        # only digested food is assimilated
         energy_assimilated = (min(self.max_digestive_rate,
                              self.stomach_content)) * self.model.RatioAFDWtoWet * self.model.AFDWenergyContent  # todo: fractiontakenup?
 
@@ -89,20 +75,14 @@ class Bird:
         # energy consumption
         energy_consumed = self.energy_requirements_one_time_step(self.model.temperature)
 
-        # update weight todo: do this every time step?
+        # update weight todo: do this every time step or only at end of tidal cycle?
         energy_difference = energy_assimilated - energy_consumed
         print("Energy assimilated:", energy_assimilated, "Energy Consumed", energy_consumed)
         print("Energy intake", wtw_intake * self.model.RatioAFDWtoWet * self.model.AFDWenergyContent)
-
-        if energy_difference < 0:
-            print("weight loss", energy_difference / self.BodyGramEnergyCont)
-            self.weight += energy_difference / self.BodyGramEnergyCont
-        elif energy_difference > 0:
-            print("weight gain", energy_difference/self.BodyGramEnergyCont)
-            self.weight += energy_difference / self.BodyGramEnergyCont
+        self.weight += energy_difference / self.BodyGramEnergyCont
 
         # apply death if weight becomes too low
-        if self.weight < 400: #todo: this should be something else maybe
+        if self.weight < 400: #todo: this should be something else maybe?
             self.model.schedule.remove(self)
         # print("Weight;", self.weight, "Egain:", self.energy_gain)
 
@@ -153,7 +133,6 @@ class Bird:
         # calculate handling time and capture rate
         handling_time = prey_weight / max_intake_rate
         capture_rate = attack_rate * mussel_density / (1 + attack_rate * handling_time * mussel_density)
-        # print("capture_rate:", capture_rate)
         return capture_rate
 
     @staticmethod
@@ -163,13 +142,12 @@ class Bird:
         :return max intake rate in mg
         """
 
-        # parameters
+        # parameters todo: in parameter file
         mussel_intake_rate_A = 0.092  # parameters for max intake rate (plateau)
         mussel_intake_rate_B = 0.506
 
         # calculate plateau/max intake rate
         max_intake_rate = mussel_intake_rate_A * prey_weight ** mussel_intake_rate_B
-        # print("max IR:", max_intake_rate)
         return max_intake_rate
 
     @staticmethod #todo: moet dit in staticfunction?
@@ -177,8 +155,6 @@ class Bird:
         """Helper method to calculate intake rate reduction as described in Stillman.
         :return:
         """
-
-        # todo: what to do with the number of days since september 1? exclude it maybe? as in 1996 paper?
 
         # parameters
         competitors_threshold = 0 # density of competitors above which interference occurs
@@ -208,7 +184,7 @@ class Bird:
         number_of_encounters = len(dominance_agents_same_patch)
 
         if number_of_encounters == 0:
-            L = 0 #todo: klopt dit? ja want die andere term wordt toch 1 (van interference)
+            L = 0
         else:
             agents_with_lower_dominance = [item for item in dominance_agents_same_patch if item < self.dominance] #todo: smaller then or equal?
             L = (len(agents_with_lower_dominance) / number_of_encounters) * 100
@@ -252,11 +228,6 @@ class Bird:
         :return:
         """
 
-        # # parameters
-        # deposition_efficiency = 0.75    # WEBTICS page 57
-        # BodyGramEnergyCont = 34.295     # kJ/gram fat
-        # BodyGramEnergyReq = 45.72666666 # kJ/gram (25% larger)
-
         # determine energy for weight gain/loss
         weight_difference = self.model.reference_weight_birds - self.weight
         print("weight difference", weight_difference)
@@ -264,10 +235,8 @@ class Bird:
         # todo: this weight energy does not take into account time step size. Is this a bad thing?
         # todo: I don't think so, Egoal will be high but then they will eat as much as possible (as should)
         # todo: Turn weight data into weight per tidal cycle.
-        if weight_difference > 0:
+        if weight_difference != 0:
             weight_energy_requirement = self.BodyGramEnergyReq * weight_difference
-        elif weight_difference < 0:
-            weight_energy_requirement = self.BodyGramEnergyCont * weight_difference
         else:
             weight_energy_requirement = 0
         energy_goal = weight_energy_requirement # todo: unnessesary variable just for clarity
@@ -287,9 +256,10 @@ class Bird:
         # check if energy goal is met
         print("energy gain", self.energy_gain)
         print("energy goal", self.energy_goal)
+
+        # eat if energy goal is not reached
         if self.energy_gain < self.energy_goal:
 
-            print( "Egain < Egoal ")
             # num of other agents and calculate local dominance
             num_agents_on_patch, local_dominance = self.calculate_local_dominance(self.model) #todo: num_agents moet geupdate worden
 
@@ -304,16 +274,12 @@ class Bird:
 
             # get total capture rate/IRs in one time step todo: dit misschien in functie (intake_rate_mussel) zetten?
             conversion_s_to_timestep = self.model.resolution_min * 60
-            total_patch_captured_num_mussels = patch_capture_rate * conversion_s_to_timestep # todo: ook voor andere prey
-            total_patch_intake_dry_weight = patch_intake_rate_dry_weight * conversion_s_to_timestep
             total_patch_intake_wet_weight = patch_intake_rate_wet_weight * conversion_s_to_timestep #todo: moet dit allemaal berekent worden?
-            # print("total captured mussels in one time step", total_patch_captured_num_mussels)
 
             # check stomach space left
             stomach_left = self.max_stomach_content - self.stomach_content
 
             # calculate possible intake based on stomach left and digestive rate
-            conversion_day_to_timestep = 10 / (24 * 60)
             possible_wtw_intake = self.max_digestive_rate + stomach_left
 
             # intake is minimum of possible intake and intake achievable on patch

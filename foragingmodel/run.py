@@ -1,6 +1,6 @@
 import data
 
-from model import OystercatcherModel
+from oystercatchermodel import OystercatcherModel
 
 import matplotlib.pyplot as plt
 
