@@ -67,6 +67,11 @@ class OystercatcherModel(Model):
         # todo: datacollector here
         self.data = defaultdict(list)
 
+        self.cockle_sizes = params["cockle_sizes"] # in mm todo: deze waardes moeten veranderen door de tijd
+        self.handling_time_cockles = []
+
+
+
         # create birds
         for i in range(self.init_birds):
 
@@ -93,6 +98,15 @@ class OystercatcherModel(Model):
 
         # update time step within cycle
         self.time_in_cycle = self.schedule.time % self.steps_per_tidal_cycle
+
+        # calculate handling time cockles
+        self.handling_time_cockles = []
+        for size in self.cockle_sizes:
+            self.handling_time_cockles.append(self.calculate_handling_time_cockles(size))
+
+
+        # todo: hier mossel kokkel gewicht updaten
+        # todo: misschien als we geen interferentie meenemen hier de intake rate voor mudflats berekenen?
 
         # if self.schedule.time % self.steps_per_tidal_cycle == 0:
         #     print("New tidal cycle!", "schedule time: ", self.schedule.time)
@@ -137,3 +151,17 @@ class OystercatcherModel(Model):
     #         return (total_num_agents - dominance) * 100 / (total_num_agents - 1)
     #     else:
     #         return 100 #todo: should this be 100?
+
+    @staticmethod
+    def calculate_handling_time_cockles(cockle_size):
+        """ Helper method to calculate the handling time for each cockle size class
+        :param cockle_size: size of cockle in mm
+        """
+        # parameters
+        leoA = 0.000860373# Zwarts et al. (1996b), taken from WEBTICS
+        leoB = 0.220524 # Zwarts et al.(1996b)
+        leoC = 1.79206
+        return leoB * (cockle_size ** leoC)
+
+
+

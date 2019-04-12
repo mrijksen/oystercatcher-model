@@ -40,3 +40,40 @@ def get_random_area(params):
     return np.array([random.randint(params["min_area"], params["max_area"])
                      for x in range(params["num_patches"])])
 
+
+def create_patch_list(params):
+    """ Returns list with patch type for every patch id.
+
+    :patch_types is list with strings describing patch types
+    :patch_type_counts is list with number of patches for each patch type.
+    """
+
+    patch_types = params["patch_name_list"]
+    patch_type_counts = params["patch_type_counts"]
+    patch_name_list = []
+    for i in range(len(patch_type_counts)):
+        for j in range(patch_type_counts[i]):
+            patch_name_list.append(patch_types[i])
+    return patch_name_list
+
+
+def create_random_prey(params, patch_name_list):
+    """ Returns prey for all patches.
+
+    Input is list with patch types. Depending on the patch type
+    different prey is assigned to the patch. """
+
+    density_mussel = params["density_mussel"]
+    density_kokkels_1 = params["density_kokkels_1"]
+    density_kokkels_2 = params["density_kokkels_2"]
+    density_kokkels_mj = params["density_kokkels_mj"]
+
+    prey = []
+
+    for patch in patch_name_list:
+        if patch == "Bed":
+            prey.append({"mussel_density": density_mussel})
+        if patch == "Mudflat":
+            prey.append({"kok1": density_kokkels_1, "kok2": density_kokkels_2,
+                         "kokmj": density_kokkels_mj})
+    return prey

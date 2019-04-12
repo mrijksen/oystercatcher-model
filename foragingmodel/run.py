@@ -4,6 +4,8 @@ from oystercatchermodel import OystercatcherModel
 
 import matplotlib.pyplot as plt
 
+import numpy as np
+
 
 params = data.get_params()
 
@@ -14,7 +16,8 @@ def initiate_model(params=params):
 
     # initial prey for all patches
     # init_prey = data.get_random_prey(params)
-    prey = data.create_random_prey(params)
+    patch_name_list = data.create_patch_list(params)
+    prey = data.create_random_prey(params, patch_name_list)
 
     # availability for all patches and all time steps
     availability = data.get_random_availability(params)
@@ -31,7 +34,7 @@ def initiate_model(params=params):
 model = initiate_model()
 model.run_model()
 
-print(model.schedule.agents[0].weight_throughout_cycle)
+print(np.mean(model.schedule.agents[0].weight_throughout_cycle))
 
 plt.figure(1)
 plt.plot(model.schedule.agents[0].weight_throughout_cycle, label="weight")
