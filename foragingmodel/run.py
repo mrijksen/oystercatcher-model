@@ -26,7 +26,7 @@ def initiate_model(params=params):
     area_of_patches = data.get_random_area(params)
 
     # instantiate model
-    model = OystercatcherModel(params, prey, availability, area_of_patches)
+    model = OystercatcherModel(params, patch_name_list, prey, availability, area_of_patches)
     return model
 
 

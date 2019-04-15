@@ -58,7 +58,7 @@ def create_patch_list(params):
 
 
 def create_random_prey(params, patch_name_list):
-    """ Returns prey for all patches.
+    """ Returns prey for all patches (density).
 
     Input is list with patch types. Depending on the patch type
     different prey is assigned to the patch. """
