@@ -3,8 +3,8 @@
   "num_patches" : 1,
   "min_prey" : 50,
   "max_prey" : 50,
-  "min_area" : 10,
-  "max_area": 10,
+  "min_area" : 1,
+  "max_area": 1,
   "num_tidal_cycles" : 100,
   "minutes_in_tidal_cycle" : 750,
   "resolution_min" : 10,
@@ -14,11 +14,13 @@
   "temperature": 10,
   "reference_weight": 550,
   "density_mussel" : 400,
-  "density_kokkels_1" : 10000,
-  "density_kokkels_2" : 0,
-  "density_kokkels_mj" : 0,
+  "density_kokkels_1" : 10,
+  "density_kokkels_2" : 10,
+  "density_kokkels_mj" : 10,
   "init_kok_dry_weight": 600,
   "patch_name_list" : ["Bed", "Mudflat"],
   "patch_type_counts" : [0, 1],
-  "cockle_sizes" : [30, 30, 30]
+  "cockle_sizes" : [30, 30, 30],
+  "cockle_wet_weight": [2, 2, 2 ],
+  "cockle_fresh_weight": [10, 10, 10]
 }

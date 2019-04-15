@@ -46,8 +46,7 @@ class Bird:
             # get some data
             self.stomach_content_list.append(self.stomach_content)
             self.weight_throughout_cycle.append(self.weight)
-            # print("PREVIOUS GOAL AND GAIN", self.energy_goal, self.energy_gain)
-            # print("WEIGHT START OF CYCLE", self.weight)
+
             self.energy_goal = self.energy_goal_coming_cycle(self.model.temperature) #todo: what temperature?
             self.energy_gain = self.stomach_content * self.model.RatioAFDWtoWet * self.model.AFDWenergyContent # todo check stomach content
             # self.stomach_content = 500
@@ -60,15 +59,20 @@ class Bird:
 
             # calculate competitor density
             density_of_competitors = num_agents_on_patch / self.model.patch_areas[self.pos]  # todo: in stillman is dit in ha, dit kan ook in functie calculate local dom
-
+            # print(self)
             # todo: check patch type and calculate intake on that patch based on available prey and competitors
-            # wtw_intake = self.consume_mussel_diet(density_of_competitors, local_dominance)
+
+
+            if self.model.patch_name_list[self.pos] == "Bed":
+                wtw_intake = self.consume_mussel_diet(density_of_competitors, local_dominance)
+            elif self.model.patch_name_list[self.pos] == "Mudflat":
+                wtw_intake = self.consume_mudflats_diet()
 
             # update stomach content (add wet weight)
-            # self.stomach_content += wtw_intake
+            self.stomach_content += wtw_intake
 
             # update energy gain (everything that is eaten)
-            # self.energy_gain += wtw_intake * self.model.RatioAFDWtoWet * self.model.AFDWenergyContent
+            self.energy_gain += wtw_intake * self.model.RatioAFDWtoWet * self.model.AFDWenergyContent
 
         # only digested food is assimilated
         energy_assimilated = (min(self.max_digestive_rate, self.stomach_content)) \
@@ -257,6 +261,8 @@ class Bird:
         """ Method that lets agent forage on mussel patch. Based on the energy goal and the stomach content
         the intake of an agent is evaluated.
 
+        The patch depletion is also implemented.
+
         Returns the wet weight consumed (g).
         """
         #todo: ze doen nu hele tijdstap hetzelfde, moeten iets toevoegen zodat ze deel van tijdstap kunnen forageren
@@ -266,6 +272,7 @@ class Bird:
         patch_capture_rate = self.capture_rate_mussel(self.model.prey[self.pos]["mussel_density"],
                                                      self.model.init_mussel_dry_weight, density_of_competitors,
                                                      local_dominance)
+                                                        # todo: verander input, niet nodig om density of prey te geven
 
         # wet intake rate
         patch_wet_intake = patch_capture_rate * self.model.init_mussel_wet_weight # g WtW/s
@@ -274,11 +281,8 @@ class Bird:
         conversion_s_to_timestep = self.model.resolution_min * 60
         total_patch_intake_wet_weight = patch_wet_intake * conversion_s_to_timestep # g/time step
 
-        # check stomach space left
-        stomach_left = self.max_stomach_content - self.stomach_content # g
-
         # calculate possible intake based on stomach left and digestive rate
-        possible_wtw_intake = self.max_digestive_rate + stomach_left # g / 10 minutes
+        possible_wtw_intake = self.calculate_possible_intake() # g / 10 minutes
 
         # intake is minimum of possible intake and intake achievable on patch
         intake_wtw = min(total_patch_intake_wet_weight, possible_wtw_intake) # WtW intake in g todo: wat doen met halve mossel?
@@ -286,20 +290,67 @@ class Bird:
         # num prey captured
         # num_prey_captured = int(intake_wtw / self.model.init_mussel_wet_weight) #todo: hier de leftover fraction?
 
-        # todo: dit klopt niet als de intake wtw de possible wtw intake is
-        # num_prey_captured = patch_capture_rate * conversion_s_to_timestep
+        # calculate number prey captured
         num_prey_captured = intake_wtw / self.model.init_mussel_wet_weight
 
-        # update patch density todo: doe dit buiten deze functie
+        # update patch density todo: dit hoeft er niet meer in
         self.model.prey[self.pos]["mussel_density"] -= num_prey_captured / self.model.patch_areas[self.pos]
         return intake_wtw
 
     def consume_mudflats_diet(self):
-        """ Method that lets agent forage on mudflat (currently only cockles taken into account)
-        :return:
+        """ Method that lets agent forage on mudflat (currently only cockles taken into account).
+
+        In this method the depletion of prey on a patch is also implemented.
+
+        :return: The amount of wet weight foraged is returned (in g).
         """
 
+        # get the capture rate of all prey on mudflat (different cockle sizes)
+        capture_rate_kok1, capture_rate_kok2, capture_rate_kokmj = self.combined_capture_rate_cockle()
+        # print("total capture rate", (capture_rate_kok1 + capture_rate_kok2 + capture_rate_kokmj)* 600)
+        # wet weight intake rate (g/s)
+        patch_wet_intake = capture_rate_kok1 * self.model.cockle_wet_weight[0] \
+                             + capture_rate_kok2 * self.model.cockle_wet_weight[1]\
+                             + capture_rate_kokmj * self.model.cockle_wet_weight[2]
+
+        # convert to intake rate of one time step
+        conversion_s_to_timestep = self.model.resolution_min * 60 # todo: dubbel
+        total_patch_intake_wet_weight = patch_wet_intake * conversion_s_to_timestep
+        # print("total patch intake wet", total_patch_intake_wet_weight)
+
+        # calculate possible intake based on stomach left and digestive rate
+        possible_wtw_intake = self.calculate_possible_intake()  # g / 10 minutes
+
+        # intake is minimum of possible intake and intake achievable on patch
+        intake_wtw = min(total_patch_intake_wet_weight, possible_wtw_intake)  # WtW intake in g
+        # print("intake wtw", intake_wtw, possible_wtw_intake)
+        # compare final intake to original patch intake todo: dit is nu wat moeilijker, mss met fracties?
+        fraction_possible_final_intake = intake_wtw / total_patch_intake_wet_weight
+
+        # calculate final number of prey eaten
+        final_captured_kok1 = capture_rate_kok1 * conversion_s_to_timestep * fraction_possible_final_intake
+        final_captured_kok2 = capture_rate_kok2 * conversion_s_to_timestep * fraction_possible_final_intake
+        final_captured_kokmj = capture_rate_kokmj * conversion_s_to_timestep * fraction_possible_final_intake
+        print("final prey eaten", final_captured_kok1, final_captured_kok2, final_captured_kokmj)
+
+        # print("prey before:", self.model.prey[self.pos]["kok1"], self.model.prey[self.pos]["kok2"], self.model.prey[self.pos]["kokmj"])
+
+        # deplete prey todo: voeg area toe!!
+        self.model.prey[self.pos]["kok1"] -= final_captured_kok1 / self.model.patch_areas[self.pos]
+        self.model.prey[self.pos]["kok2"] -= final_captured_kok2 / self.model.patch_areas[self.pos]
+        self.model.prey[self.pos]["kokmj"] -= final_captured_kokmj / self.model.patch_areas[self.pos]
+
+        # print("prey after:", self.model.prey[self.pos]["kok1"], self.model.prey[self.pos]["kok2"],
+              # self.model.prey[self.pos]["kokmj"])
+        return intake_wtw
+
     def combined_capture_rate_cockle(self):
+        """ Method that calculates the intake rate when agent forages on cockles. Three different size classes of
+        cockles are taken into account (0-1, 2 and >2 years old)
+
+        The method looks at the density and weight of the cockles on the patch the agent is currently on and returns
+        the capture rate of the different size class cockles in #/s.
+        """
 
         # get density and size of all cockle size classes on patch
         kok1_density = self.model.prey[self.pos]["kok1"]
@@ -308,12 +359,12 @@ class Bird:
         kok1_handling_time = self.model.handling_time_cockles[0]
         kok2_handling_time = self.model.handling_time_cockles[1]
         kokmj_handling_time = self.model.handling_time_cockles[2]
-        cockle_sizes = self.model.cockle_sizes
+        # cockle_sizes = self.model.cockle_sizes
 
         # parameters
         leoA = 0.000860373  # Zwarts et al. (1996b), taken from WEBTICS
         leoB = 0.220524  # Zwarts et al.(1996b)
-        leoC = 1.79206
+        # leoC = 1.79206
         attack_rate = leoA * leoB
 
         # calculate capture rate for every size class (number of cockles/s)
@@ -333,16 +384,26 @@ class Bird:
         capture_rate_kokmj = capture_rate_kokmj_num / final_denominator
         return capture_rate_kok1, capture_rate_kok2, capture_rate_kokmj
 
-    # @staticmethod
-    # def capture_rate_cockle(size, density):
-    #     """ Helper method that calculates capture rate for one size class cockle.
-    #     :param size: size of cockle in mm
-    #     :param density: density of this cockle size
-    #     :return: capture rate
-    #     """
+    def calculate_possible_intake(self):
+        """ Method calculated the intake rate a bird can have (which depends on how full its stomach is and also
+        the digestive rate)
+        """
 
+        # check stomach space left
+        stomach_left = self.max_stomach_content - self.stomach_content  # g
 
+        # calculate possible intake based on stomach left and digestive rate
+        possible_wtw_intake = self.max_digestive_rate + stomach_left  # g / 10 minutes
+        return possible_wtw_intake
 
+    def consume_grassland_diet(self):
+        """ Method that lets agent forage on grassland patch. Based on the energy goal and the stomach content
+        the intake of an agent is evaluated.
+
+        The patch depletion is also implemented.
+
+        Returns the wet weight consumed (g).
+        """
 
 
 

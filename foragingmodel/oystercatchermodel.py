@@ -16,7 +16,7 @@ import numpy as np
 
 class OystercatcherModel(Model):
 
-    def __init__(self, params, prey_densities, availability, patch_areas):
+    def __init__(self, params, patch_name_list, prey_densities, availability, patch_areas):
         """ Create a new model with given parameters
         :param init_prey: list with initial prey on patches #todo: divide in diff prey
         :param availability: array with availability on all patches for all t
@@ -55,6 +55,7 @@ class OystercatcherModel(Model):
         # Patches characteristics
         # array with number of agents on every patch
         self.num_agents_on_patches = np.zeros(self.num_patches, dtype=int) #todo: misschien overbodig?
+        self.patch_name_list = patch_name_list # todo: dit moet als argument mee worden gegeven
         self.patch_areas = patch_areas
         self.agents_on_patches = [[] for _ in range(self.num_patches)] #todo: kan dit misschien sneller? met arrays?
 
@@ -67,10 +68,11 @@ class OystercatcherModel(Model):
         # todo: datacollector here
         self.data = defaultdict(list)
 
+        # cockle data
         self.cockle_sizes = params["cockle_sizes"] # in mm todo: deze waardes moeten veranderen door de tijd
         self.handling_time_cockles = []
-
-
+        self.cockle_fresh_weight = params["cockle_fresh_weight"]
+        self.cockle_wet_weight = params["cockle_wet_weight"]
 
         # create birds
         for i in range(self.init_birds):
@@ -99,10 +101,19 @@ class OystercatcherModel(Model):
         # update time step within cycle
         self.time_in_cycle = self.schedule.time % self.steps_per_tidal_cycle
 
+        # calculate wet weight mussels with formula
+
+        # calculate new fresh weight cockles with extrapolation
+
+        # calculate new size cockles (mm) with formula that relates fresh weight to length
+
+        # calculate wet weight cockles (g)
+
         # calculate handling time cockles
         self.handling_time_cockles = []
         for size in self.cockle_sizes:
             self.handling_time_cockles.append(self.calculate_handling_time_cockles(size))
+
 
 
         # todo: hier mossel kokkel gewicht updaten
@@ -158,7 +169,7 @@ class OystercatcherModel(Model):
         :param cockle_size: size of cockle in mm
         """
         # parameters
-        leoA = 0.000860373# Zwarts et al. (1996b), taken from WEBTICS
+        # leoA = 0.000860373# Zwarts et al. (1996b), taken from WEBTICS
         leoB = 0.220524 # Zwarts et al.(1996b)
         leoC = 1.79206
         return leoB * (cockle_size ** leoC)
