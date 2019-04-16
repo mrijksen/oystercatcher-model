@@ -38,7 +38,9 @@ class OystercatcherModel(Model):
         self.init_mussel_dry_weight = params["init_mussel_dry_weight"]
         self.init_mussel_wet_weight = params["init_mussel_wet_weight"]
         self.AFDWenergyContent = 22.5 # kJ/gram todo: in parameter file
-        self.RatioAFDWtoWet = 0.16 # afdw per gram wet weight
+        self.RatioAFDWtoWet = 0.16 # afdw per gram wet weight for cockles and mussel
+        # self.RatioDrytoWetEarthworm = 0.175 # gram dry weight per wet weight for earthworms Heppleston1971
+        # self.EarthwormDryEnergyContent = 3.778 * 4.1867  # kJ per g dry weight
 
         self.temperature = params["temperature"] #todo: moet in data set komen
         self.reference_weight_birds = params["reference_weight"] #todo: moet in data set komen

@@ -19,7 +19,7 @@ class Bird:
 
         # stomach, weight, energy goal
         self.stomach_content = 0 # g todo: waarmee initialiseren?
-        self.weight = 500 # g
+        self.weight = 550 # g
         self.energy_goal = None #kJ
         self.energy_gain = 0 # energy already foraged kJ
 
@@ -37,68 +37,90 @@ class Bird:
         self.weight_throughout_cycle = []
         self.stomach_content_list = []
 
+        self.time_foraged = None
+
     def step(self): # todo:
         """A model step. Move, then eat. """
         # print("Agent id:", self.unique_id, "pos:", self.pos, "weight:", self.weight)
 
         # determine energy goal at start of new tidal cycle and set gain to zero
         if self.model.time_in_cycle == 0:
+
             # get some data
             self.stomach_content_list.append(self.stomach_content)
             self.weight_throughout_cycle.append(self.weight)
 
             self.energy_goal = self.energy_goal_coming_cycle(self.model.temperature) #todo: what temperature?
             self.energy_gain = self.stomach_content * self.model.RatioAFDWtoWet * self.model.AFDWenergyContent # todo check stomach content
-            # self.stomach_content = 500
+
+            print(self.model.schedule.time)
+            self.time_foraged = 0
 
         # foraging
         if self.model.time_in_cycle >= self.start_foraging and self.energy_gain < self.energy_goal: #todo: move if patch not available
-
+            self.time_foraged += 1
             # num of other agents and calculate local dominance todo: for some patches this is not needed
             num_agents_on_patch, local_dominance = self.calculate_local_dominance(self.model)  # todo: num_agents moet geupdate worden
 
             # calculate competitor density
             density_of_competitors = num_agents_on_patch / self.model.patch_areas[self.pos]  # todo: in stillman is dit in ha, dit kan ook in functie calculate local dom
-            # print(self)
-            # todo: check patch type and calculate intake on that patch based on available prey and competitors
-
-
+            print("time in cycle > start foraging and energy goal not met")
+            # check patch type and calculate intake on that patch based on available prey and competitors
             if self.model.patch_name_list[self.pos] == "Bed":
                 wtw_intake = self.consume_mussel_diet(density_of_competitors, local_dominance)
+
+                # update stomach content (add wet weight)
+                self.stomach_content += wtw_intake
+
+                # update energy gain (everything that is eaten)
+                self.energy_gain += wtw_intake * self.model.RatioAFDWtoWet * self.model.AFDWenergyContent
             elif self.model.patch_name_list[self.pos] == "Mudflat":
                 wtw_intake = self.consume_mudflats_diet()
 
-            # update stomach content (add wet weight)
-            self.stomach_content += wtw_intake
+                # update stomach content (add wet weight)
+                self.stomach_content += wtw_intake
 
-            # update energy gain (everything that is eaten)
-            self.energy_gain += wtw_intake * self.model.RatioAFDWtoWet * self.model.AFDWenergyContent
+                # update energy gain (everything that is eaten)
+                self.energy_gain += wtw_intake * self.model.RatioAFDWtoWet * self.model.AFDWenergyContent
 
-        # only digested food is assimilated
-        energy_assimilated = (min(self.max_digestive_rate, self.stomach_content)) \
-                             * self.model.RatioAFDWtoWet * self.model.AFDWenergyContent  # todo: fractiontakenup?
+            elif self.model.patch_name_list[self.pos] == "Grassland": # todo: hoe hier de energyconversie?
+                energy_intake = self.consume_grassland_diet()
+                print("energy intake", energy_intake)
+                print("YESSSSSSSSSSSSSSSSS")
+                # update stomach content (add wet weight) todo: dit maar weglaten dan? of welke wet weight toevoegen?
+                # self.stomach_content += wtw_intake
+
+                # update energy gain #todo: hier energy conversion of niet?
+                self.energy_gain += energy_intake
+
+        # # only digested food is assimilated todo: hoe hier checken hoe energy content voor wormen omhooggaat?
+        # energy_assimilated = (min(self.max_digestive_rate, self.stomach_content)) \
+        #                      * self.model.RatioAFDWtoWet * self.model.AFDWenergyContent  # todo: fractiontakenup?
+        # print(energy_assimilated, " E ASSIMILATED")
 
         # digestion
-        self.stomach_content -= min(self.max_digestive_rate, self.stomach_content) # TODO DIT MOET NAAR TIJDSTAP OMGEZET
+        self.stomach_content -= min(self.max_digestive_rate, self.stomach_content) # todo: worms zitten hier niet in
 
-        # energy consumption
-        energy_consumed = self.energy_requirements_one_time_step(self.model.temperature)
+        # at the end of the tidal cycle update weight todo: hier moet de temperatuur op een juiste manier in.
+        if self.model.time_in_cycle == self.model.steps_per_tidal_cycle - 1: # check if this is correct
+            print(self.model.schedule.time, "TIME")
+            # energy consumption
+            energy_consumed = self.energy_requirements_one_time_step(self.model.temperature) * self.model.steps_per_tidal_cycle # todo: dit hangt dus van tidal cycle af
 
-        # update weight todo: do this every time step or only at end of tidal cycle? DIT GAAT MIS
-        energy_difference = energy_assimilated - energy_consumed
-        # print("energy difference ", energy_difference)
-        if energy_difference < 0:
-            self.weight += energy_difference / self.BodyGramEnergyCont
-        elif energy_difference > 0:
-            self.weight += energy_difference / self.BodyGramEnergyReq
+            # update weight
+            energy_difference = self.energy_gain - energy_consumed
+            if energy_difference < 0:
+                self.weight += energy_difference / self.BodyGramEnergyCont
+            elif energy_difference > 0:
+                self.weight += energy_difference / self.BodyGramEnergyReq
 
-        # apply death if weight becomes too low
-        if self.weight < self.minimum_weight: #todo: this should be something else maybe?
-            self.model.schedule.remove(self)
+            # apply death if weight becomes too low todo: ook per tidal cycle
+            if self.weight < self.minimum_weight: #todo: this should be something else maybe?
+                self.model.schedule.remove(self)
         # print("Weight;", self.weight, "Egain:", self.energy_gain)
 
 
-        print(self.combined_capture_rate_cockle()[0] * 60)
+        # print(self.combined_capture_rate_cockle()[0] * 60)
 
     def capture_rate_mussel(self, mussel_density, prey_dry_weight, density_competitors, local_dominance):
         """Calculate intake rate for mussel patch on Wadden Sea.
@@ -396,7 +418,7 @@ class Bird:
         possible_wtw_intake = self.max_digestive_rate + stomach_left  # g / 10 minutes
         return possible_wtw_intake
 
-    def consume_grassland_diet(self):
+    def consume_grassland_diet(self): #todo: should be temperature dependent
         """ Method that lets agent forage on grassland patch. Based on the energy goal and the stomach content
         the intake of an agent is evaluated.
 
@@ -404,6 +426,34 @@ class Bird:
 
         Returns the wet weight consumed (g).
         """
+
+        # parameters
+        afdw_intake_grassland = 0.53 * 60 * self.model.resolution_min # mg / time step, Stillman2000
+
+        # wet_weight_earthworm = 0.400 # Heppleston 1971
+        # capture_rate_earthworm = 1.17 # #/min, Heppleston 1971
+
+        # calculate intake per timestep todo: dit hoeven we natuurlijk niet elke keer te berekenen
+        # total_patch_intake_wet_weight = capture_rate_earthworm * wet_weight_earthworm * self.model.resolution_min
+        # print(total_patch_intake_wet_weight, "total patch intake")
+
+        # intake rate on grassland
+
+        # calculate possible intake based on stomach left and digestive rate
+        possible_wtw_intake = self.calculate_possible_intake()  # g / 10 minutes
+
+        # # intake is minimum of possible intake and intake achievable on patch todo: is het nodig dit elke keer te berekenen?
+        # intake_wtw = min(total_patch_intake_wet_weight, possible_wtw_intake)  # WtW intake in g
+
+        # calculate energy intake (stomach update not needed since intake < digestion rate)
+        energy_intake = afdw_intake_grassland / 1000 * self.model.AFDWenergyContent # / 1000 for conversion to g
+        return energy_intake
+
+
+
+
+
+
 
 
 
