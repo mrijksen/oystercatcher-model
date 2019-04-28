@@ -53,7 +53,7 @@ class Bird:
             self.energy_goal = self.energy_goal_coming_cycle(self.model.temperature) #todo: what temperature?
             self.energy_gain = self.stomach_content * self.model.RatioAFDWtoWet * self.model.AFDWenergyContent # todo check stomach content
 
-            print(self.model.schedule.time)
+            # print(self.model.schedule.time)
             self.time_foraged = 0
 
         # foraging
@@ -64,7 +64,7 @@ class Bird:
 
             # calculate competitor density
             density_of_competitors = num_agents_on_patch / self.model.patch_areas[self.pos]  # todo: in stillman is dit in ha, dit kan ook in functie calculate local dom
-            print("time in cycle > start foraging and energy goal not met")
+            # print("time in cycle > start foraging and energy goal not met")
             # check patch type and calculate intake on that patch based on available prey and competitors
             if self.model.patch_name_list[self.pos] == "Bed":
                 wtw_intake = self.consume_mussel_diet(density_of_competitors, local_dominance)
@@ -84,11 +84,10 @@ class Bird:
                 self.energy_gain += wtw_intake * self.model.RatioAFDWtoWet * self.model.AFDWenergyContent
 
             elif self.model.patch_name_list[self.pos] == "Grassland": # todo: hoe hier de energyconversie?
-                energy_intake = self.consume_grassland_diet()
-                print("energy intake", energy_intake)
-                print("YESSSSSSSSSSSSSSSSS")
+                wtw_intake, energy_intake = self.consume_grassland_diet()
+
                 # update stomach content (add wet weight) todo: dit maar weglaten dan? of welke wet weight toevoegen?
-                # self.stomach_content += wtw_intake
+                self.stomach_content += wtw_intake
 
                 # update energy gain #todo: hier energy conversion of niet?
                 self.energy_gain += energy_intake
@@ -103,7 +102,7 @@ class Bird:
 
         # at the end of the tidal cycle update weight todo: hier moet de temperatuur op een juiste manier in.
         if self.model.time_in_cycle == self.model.steps_per_tidal_cycle - 1: # check if this is correct
-            print(self.model.schedule.time, "TIME")
+            # print(self.model.schedule.time, "TIME")
             # energy consumption
             energy_consumed = self.energy_requirements_one_time_step(self.model.temperature) * self.model.steps_per_tidal_cycle # todo: dit hangt dus van tidal cycle af
 
@@ -123,7 +122,7 @@ class Bird:
         # print(self.combined_capture_rate_cockle()[0] * 60)
 
     def capture_rate_mussel(self, mussel_density, prey_dry_weight, density_competitors, local_dominance):
-        """Calculate intake rate for mussel patch on Wadden Sea.
+        """Calculate capture rate for mussel patch on Wadden Sea.
 
         Functional response is derived from WEBTICS.
 
@@ -131,7 +130,7 @@ class Bird:
 
         Weight of prey should be given in g.
 
-        Final intake rate is in g/s.
+        Final capture rate is in #/s.
         """
 
         # todo maak hier met functional response 1 functie van
@@ -145,7 +144,6 @@ class Bird:
 
         # calculate capture rate and include interference
         capture_rate = self.functional_response_mussel(attack_rate, mussel_density, prey_dry_weight, max_intake_rate)
-        print("capture rate", capture_rate)
         final_capture_rate = capture_rate * interference
         return final_capture_rate
 
@@ -262,7 +260,7 @@ class Bird:
 
         # determine energy for weight gain/loss
         weight_difference = self.model.reference_weight_birds - self.weight
-        print("weight difference", weight_difference)
+        # print("weight difference", weight_difference)
 
         # check if bird should eat more/less for weight gain/loss
         if weight_difference < 0:
@@ -272,7 +270,7 @@ class Bird:
         else:
             weight_energy_requirement = 0
         energy_goal = weight_energy_requirement # todo: unnessesary variable just for clarity
-        print("Energy for weight gain/loss", energy_goal, "\n")
+        # print("Energy for weight gain/loss", energy_goal, "\n")
 
         # calculate normal energy requirements
         energy_goal += self.energy_requirements_one_time_step(mean_T) * self.model.steps_per_tidal_cycle
@@ -328,12 +326,15 @@ class Bird:
         """
 
         # get the capture rate of all prey on mudflat (different cockle sizes)
-        capture_rate_kok1, capture_rate_kok2, capture_rate_kokmj = self.combined_capture_rate_cockle()
-        # print("total capture rate", (capture_rate_kok1 + capture_rate_kok2 + capture_rate_kokmj)* 600)
+        capture_rate_kok1, capture_rate_kok2, capture_rate_kokmj, capture_rate_mac \
+            = self.combined_capture_rate_cockle_macoma()
+        # print("capture rate macoma", capture_rate_mac)
+
         # wet weight intake rate (g/s)
         patch_wet_intake = capture_rate_kok1 * self.model.cockle_wet_weight[0] \
                              + capture_rate_kok2 * self.model.cockle_wet_weight[1]\
-                             + capture_rate_kokmj * self.model.cockle_wet_weight[2]
+                             + capture_rate_kokmj * self.model.cockle_wet_weight[2]\
+                             + capture_rate_mac * self.model.macoma_wtw
 
         # convert to intake rate of one time step
         conversion_s_to_timestep = self.model.resolution_min * 60 # todo: dubbel
@@ -353,7 +354,8 @@ class Bird:
         final_captured_kok1 = capture_rate_kok1 * conversion_s_to_timestep * fraction_possible_final_intake
         final_captured_kok2 = capture_rate_kok2 * conversion_s_to_timestep * fraction_possible_final_intake
         final_captured_kokmj = capture_rate_kokmj * conversion_s_to_timestep * fraction_possible_final_intake
-        print("final prey eaten", final_captured_kok1, final_captured_kok2, final_captured_kokmj)
+        final_captured_mac = capture_rate_mac * conversion_s_to_timestep * fraction_possible_final_intake
+        # print("final prey eaten", final_captured_kok1, final_captured_kok2, final_captured_kokmj)
 
         # print("prey before:", self.model.prey[self.pos]["kok1"], self.model.prey[self.pos]["kok2"], self.model.prey[self.pos]["kokmj"])
 
@@ -361,12 +363,13 @@ class Bird:
         self.model.prey[self.pos]["kok1"] -= final_captured_kok1 / self.model.patch_areas[self.pos]
         self.model.prey[self.pos]["kok2"] -= final_captured_kok2 / self.model.patch_areas[self.pos]
         self.model.prey[self.pos]["kokmj"] -= final_captured_kokmj / self.model.patch_areas[self.pos]
+        self.model.prey[self.pos]["mac"] -= final_captured_mac / self.model.patch_areas[self.pos]
 
         # print("prey after:", self.model.prey[self.pos]["kok1"], self.model.prey[self.pos]["kok2"],
               # self.model.prey[self.pos]["kokmj"])
         return intake_wtw
 
-    def combined_capture_rate_cockle(self):
+    def combined_capture_rate_cockle_macoma(self):
         """ Method that calculates the intake rate when agent forages on cockles. Three different size classes of
         cockles are taken into account (0-1, 2 and >2 years old)
 
@@ -381,30 +384,44 @@ class Bird:
         kok1_handling_time = self.model.handling_time_cockles[0]
         kok2_handling_time = self.model.handling_time_cockles[1]
         kokmj_handling_time = self.model.handling_time_cockles[2]
+
+        # macoma
+        mac_density = self.model.prey[self.pos]["mac"]
+        mac_handling_time = self.model.handling_time_macoma
+
         # cockle_sizes = self.model.cockle_sizes
 
         # parameters
         leoA = 0.000860373  # Zwarts et al. (1996b), taken from WEBTICS
         leoB = 0.220524  # Zwarts et al.(1996b)
         # leoC = 1.79206
+        hiddinkA = 0.000625 # Hiddink2003
+        hiddinkB = 0.000213
         attack_rate = leoA * leoB
 
         # calculate capture rate for every size class (number of cockles/s)
         capture_rate_kok1_num = attack_rate * kok1_density # numerator of eq 5.9 webtics
-        capture_rate_kok1_den = attack_rate * kok1_handling_time * kok1_density # denominator
+        capture_rate_kok1_den = attack_rate * kok1_handling_time * kok1_density # denominator without 1 +
         capture_rate_kok2_num = attack_rate * kok2_density
         capture_rate_kok2_den = attack_rate * kok2_handling_time * kok2_density
         capture_rate_kokmj_num = attack_rate * kokmj_density
         capture_rate_kokmj_den = attack_rate * kokmj_handling_time * kokmj_density
 
+        # capture rate macoma
+        capture_rate_mac_num = hiddinkA * mac_density
+        capture_rate_mac_den = capture_rate_mac_num * mac_handling_time
+        # print("handling time in function", capture_rate_mac_num / (1 + capture_rate_mac_den))
+
         # final denominator 5.9 webtics
-        final_denominator = 1 + capture_rate_kok1_den + capture_rate_kok2_den + capture_rate_kokmj_den
+        final_denominator = 1 + capture_rate_kok1_den + capture_rate_kok2_den + capture_rate_kokmj_den \
+                            + capture_rate_mac_den
 
         # calculate number of captured prey for each size class
         capture_rate_kok1 = capture_rate_kok1_num / final_denominator
         capture_rate_kok2 = capture_rate_kok2_num / final_denominator
         capture_rate_kokmj = capture_rate_kokmj_num / final_denominator
-        return capture_rate_kok1, capture_rate_kok2, capture_rate_kokmj
+        capture_rate_mac = capture_rate_mac_num / final_denominator
+        return capture_rate_kok1, capture_rate_kok2, capture_rate_kokmj, capture_rate_mac
 
     def calculate_possible_intake(self):
         """ Method calculated the intake rate a bird can have (which depends on how full its stomach is and also
@@ -428,26 +445,25 @@ class Bird:
         """
 
         # parameters
-        afdw_intake_grassland = 0.53 * 60 * self.model.resolution_min # mg / time step, Stillman2000
+        conversion_afdw_wtw = 0.17 # conversion from thesis Jeroen Onrust
 
-        # wet_weight_earthworm = 0.400 # Heppleston 1971
-        # capture_rate_earthworm = 1.17 # #/min, Heppleston 1971
+        # intake from Stillman (also used in webtics) % todo: dit hoeft niet elke keer worden te berekent
+        afdw_intake_grassland = (0.53 * 60 * self.model.resolution_min) / 1000 # g / time step 10 mins, Stillman2000
+        print("afdw", afdw_intake_grassland)
 
-        # calculate intake per timestep todo: dit hoeven we natuurlijk niet elke keer te berekenen
-        # total_patch_intake_wet_weight = capture_rate_earthworm * wet_weight_earthworm * self.model.resolution_min
-        # print(total_patch_intake_wet_weight, "total patch intake")
+        # wtw intake % todo: dit hoeft niet elke keer te worden berekent
+        wtw_intake = afdw_intake_grassland * 1 / conversion_afdw_wtw # g / time step
+        print("wet weight", wtw_intake)
 
-        # intake rate on grassland
+        # calculate possible wtw intake based on stomach left and digestive rate
+        possible_wtw_intake = self.calculate_possible_intake()  # g / time step
 
-        # calculate possible intake based on stomach left and digestive rate
-        possible_wtw_intake = self.calculate_possible_intake()  # g / 10 minutes
+        # intake is minimum of possible intake and intake achievable on patch
+        final_intake_wtw = min(wtw_intake, possible_wtw_intake)  # WtW intake in g
 
-        # # intake is minimum of possible intake and intake achievable on patch todo: is het nodig dit elke keer te berekenen?
-        # intake_wtw = min(total_patch_intake_wet_weight, possible_wtw_intake)  # WtW intake in g
-
-        # calculate energy intake (stomach update not needed since intake < digestion rate)
-        energy_intake = afdw_intake_grassland / 1000 * self.model.AFDWenergyContent # / 1000 for conversion to g
-        return energy_intake
+        # calculate energy intake, multiply with fraction of possible intake divided by max intake
+        energy_intake = (afdw_intake_grassland * self.model.AFDWenergyContent) * final_intake_wtw / wtw_intake # kJ
+        return final_intake_wtw, energy_intake
 
 
 

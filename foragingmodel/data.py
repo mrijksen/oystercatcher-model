@@ -67,6 +67,7 @@ def create_random_prey(params, patch_name_list):
     density_kokkels_1 = params["density_kokkels_1"]
     density_kokkels_2 = params["density_kokkels_2"]
     density_kokkels_mj = params["density_kokkels_mj"]
+    density_macoma = params["density_macoma"]
 
     prey = []
 
@@ -75,7 +76,7 @@ def create_random_prey(params, patch_name_list):
             prey.append({"mussel_density": density_mussel})
         elif patch == "Mudflat":
             prey.append({"kok1": density_kokkels_1, "kok2": density_kokkels_2,
-                         "kokmj": density_kokkels_mj})
+                         "kokmj": density_kokkels_mj, "mac" : density_macoma})
         elif patch == "Grassland":
             prey.append(np.nan)
     return prey

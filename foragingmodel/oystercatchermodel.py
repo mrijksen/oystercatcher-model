@@ -74,7 +74,15 @@ class OystercatcherModel(Model):
         self.cockle_sizes = params["cockle_sizes"] # in mm todo: deze waardes moeten veranderen door de tijd
         self.handling_time_cockles = []
         self.cockle_fresh_weight = params["cockle_fresh_weight"]
-        self.cockle_wet_weight = params["cockle_wet_weight"]
+        self.cockle_wet_weight = params["cockle_wet_weight"] # should be in g
+
+        # macoma data
+        self.macoma_init_wtw = 1.05
+        self.macoma_wtw = 1.05
+
+
+        # handling time macoma
+        self.handling_time_macoma = self.calculate_handling_time_macoma()
 
         # create birds
         for i in range(self.init_birds):
@@ -115,6 +123,8 @@ class OystercatcherModel(Model):
         self.handling_time_cockles = []
         for size in self.cockle_sizes:
             self.handling_time_cockles.append(self.calculate_handling_time_cockles(size))
+
+        # calculate handling time macoma
 
 
 
@@ -176,5 +186,18 @@ class OystercatcherModel(Model):
         leoC = 1.79206
         return leoB * (cockle_size ** leoC)
 
+    def calculate_handling_time_macoma(self):
+        """ Helper method to calculate handling time for macoma balthica.
+
+            Currently this handling time is only based on the initial weight of macoma balthica.
+
+            The input should be given in g! not mg.
+        """
+
+        # parameters
+        hiddinkA = 0.000625     # by Hiddink2003
+        hiddinkB = 0.000213     # handling parameter (Hiddink2003)
+        print("Handling time", (hiddinkB / hiddinkA) * (1000 * self.macoma_init_wtw * self.RatioAFDWtoWet))
+        return (hiddinkB / hiddinkA) * (1000 * self.macoma_init_wtw * self.RatioAFDWtoWet)
 
 
