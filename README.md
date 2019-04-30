@@ -16,7 +16,7 @@ To do: Add all model parameters in this file and also remove the patch initialis
 ### ``agent.py``
 This file contains the bird class. 
 
-# step 
+#### step 
 This method describes what a bird does within each model step. 
 
 ### ``data.py``
