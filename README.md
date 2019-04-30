@@ -6,7 +6,12 @@ The oystercatcher model is an agent-based simulation of foraging oystercatchers 
 
 ## How to run
 
+To run the model, the ``run.py`` file should be executed. 
+
 ## Files
+
+### ``run.py`` 
+Instantiates and runs the model based on the parameter file and input data (environmental data). 
 
 ### ``schedule.py``
 Contains a scheduler that makes sure at every time step all agents are activated randomly. Borrowed from the ``mesa`` library. 
