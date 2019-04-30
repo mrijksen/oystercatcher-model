@@ -14,10 +14,10 @@ This file contains several parameters of the model. Currently it also contains w
 To do: Add all model parameters in this file and also remove the patch initialisation.
 
 ### ``agent.py``
-This file contains the bird class. 
+This file contains the bird class which describes all the behaviour of the birds within the model steps. 
 
-#### step 
-This method describes what a bird does within each model step. 
+Some methods in this class are:
+- Step: This method describes what a bird does within each model step. 
 
 ### ``data.py``
 
