@@ -9,7 +9,7 @@ The oystercatcher model is an agent-based simulation of foraging oystercatchers 
 ## Files
 
 ### ``schedule.py``
-Contains a scheduler that makes sure at every time step all agents are activated randomly. 
+Contains a scheduler that makes sure at every time step all agents are activated randomly. Borrowed from the ``mesa`` library. 
 
 ### ``config_file.json``
 This file contains several parameters of the model. Currently it also contains which patches are initialised in the model (with prey weight and density).
