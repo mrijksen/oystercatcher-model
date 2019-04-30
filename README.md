@@ -17,7 +17,8 @@ To do: Add all model parameters in this file and also remove the patch initialis
 This file contains the bird class which describes all the behaviour of the birds within the model steps. 
 
 Some methods in this class are:
-- Step: This method describes what a bird does within each model step. 
+- ``Step``: This method describes what a bird does within each model step. In every model step it checks whether a new tidal cycle starts. If this is the case, it calculated its' energy requirements for the coming time steps. In every step the bird forages on the patch it is located on (mussel, mudflat or grass patch) and uses energy (depending on the temperature and weight of the bird). 
+- Capture
 
 ### ``data.py``
 
