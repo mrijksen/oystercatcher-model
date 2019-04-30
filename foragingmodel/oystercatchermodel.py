@@ -16,7 +16,7 @@ import numpy as np
 
 class OystercatcherModel(Model):
 
-    def __init__(self, params, patch_name_list, prey_densities, availability, patch_areas):
+    def __init__(self, params, patch_name_list, prey_densities, patch_areas, env_data, patch_data):
         """ Create a new model with given parameters
         :param init_prey: list with initial prey on patches #todo: divide in diff prey
         :param availability: array with availability on all patches for all t
@@ -29,7 +29,6 @@ class OystercatcherModel(Model):
 
         # set parameters #todo: zet sommige dingen in param file
         self.prey = prey_densities
-        self.availability = availability
         self.init_birds = params["init_birds"]
         self.mussel = params["mussel"]
         self.num_patches = params["num_patches"]
@@ -39,8 +38,8 @@ class OystercatcherModel(Model):
         self.init_mussel_wet_weight = params["init_mussel_wet_weight"]
         self.AFDWenergyContent = 22.5 # kJ/gram todo: in parameter file
         self.RatioAFDWtoWet = 0.16 # afdw per gram wet weight for cockles and mussel
-        # self.RatioDrytoWetEarthworm = 0.175 # gram dry weight per wet weight for earthworms Heppleston1971
-        # self.EarthwormDryEnergyContent = 3.778 * 4.1867  # kJ per g dry weight
+        self.FractionTakenUp = 0.85  # Speakman1987, KerstenVisser1996, KerstenPiersma1987, ZwartsBlomert1996
+        self.LeftOverShellfish = 0.1
 
         self.temperature = params["temperature"] #todo: moet in data set komen
         self.reference_weight_birds = params["reference_weight"] #todo: moet in data set komen
@@ -51,8 +50,10 @@ class OystercatcherModel(Model):
         self.minutes_in_tidal_cycle = params["minutes_in_tidal_cycle"] # minutes in tidal cycle, 720 = 12 hours
 
         # calculate number of time steps in total and in one tidal cycle
-        self.num_steps = self.get_steps(self.num_tidal_cycles, self.minutes_in_tidal_cycle, self.resolution_min)
+        # self.num_steps = self.get_steps(self.num_tidal_cycles, self.minutes_in_tidal_cycle, self.resolution_min)
+        self.num_steps = env_data.shape[0]
         self.steps_per_tidal_cycle = self.get_steps(1, self.minutes_in_tidal_cycle, self.resolution_min)
+
 
         # Patches characteristics
         # array with number of agents on every patch
@@ -106,7 +107,8 @@ class OystercatcherModel(Model):
             self.num_agents_on_patches[pos] += 1
             self.schedule.add(bird)
 
-    def step(self):
+    def step(self): # todo: make this part data driven
+        print(self.schedule.time)
 
         # update time step within cycle
         self.time_in_cycle = self.schedule.time % self.steps_per_tidal_cycle
@@ -149,12 +151,15 @@ class OystercatcherModel(Model):
         # maak defaultdict
 
     def run_model(self):
+        """ Run the model for the time steps indicated in the data set
+        """
+
         print("Initial number birds: {}".format(self.init_birds))
 
         # simulate for given number of num_steps
-        for i in range(self.num_steps):
-            # print("\nstep:", i, "hours passed: ", (i * 10/60))
+        for i in range(self.num_steps):  # todo: geef hier aantal stappen in df mee
             self.step()
+
         print("Final number of birds: {}".format(self.schedule.get_agent_count()))
 
     @staticmethod
@@ -197,7 +202,6 @@ class OystercatcherModel(Model):
         # parameters
         hiddinkA = 0.000625     # by Hiddink2003
         hiddinkB = 0.000213     # handling parameter (Hiddink2003)
-        print("Handling time", (hiddinkB / hiddinkA) * (1000 * self.macoma_init_wtw * self.RatioAFDWtoWet))
         return (hiddinkB / hiddinkA) * (1000 * self.macoma_init_wtw * self.RatioAFDWtoWet)
 
 

@@ -40,7 +40,6 @@ def get_random_area(params):
     return np.array([random.randint(params["min_area"], params["max_area"])
                      for x in range(params["num_patches"])])
 
-
 def create_patch_list(params):
     """ Returns list with patch type for every patch id.
 
