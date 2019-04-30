@@ -166,6 +166,9 @@ class OystercatcherModel(Model):
         # maak paar datacollectie functies en roep die aan
         # maak defaultdict
 
+        self.new_tidal_cycle = False
+
+
     def run_model(self):
         """ Run the model for the time steps indicated in the data set
         """

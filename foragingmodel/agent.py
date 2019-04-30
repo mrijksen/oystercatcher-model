@@ -38,6 +38,7 @@ class Bird:
         self.weight_throughout_cycle = []
         self.stomach_content_list = []
         self.time_foraged = None
+        self.foraging_time_per_cycle = []
 
     def step(self): # todo:
         """A model step. Move, then eat. """
@@ -46,6 +47,9 @@ class Bird:
         # determine energy goal at start of new tidal cycle and set gain to zero
         # if self.model.time_in_cycle == 0:
         if self.model.new_tidal_cycle:
+
+            # collect foraging time data
+            self.foraging_time_per_cycle.append(self.time_foraged)
 
             # get some data
             self.stomach_content_list.append(self.stomach_content)
@@ -58,12 +62,11 @@ class Bird:
             # keep track of time foraged within coming cycle
             self.time_foraged = 0
 
-            # set new tidal bool to false
-            self.model.new_tidal_cycle = False
+            # # set new tidal bool to false todo : ja dit klopt ofc niet als er meer vogels zijn
+            # self.model.new_tidal_cycle = False
 
         # foraging
         if self.model.time_in_cycle >= self.start_foraging and self.energy_gain < self.energy_goal: #todo: move if patch not available
-            self.time_foraged += 1
 
             # intake rate mussel bed
             if self.model.patch_name_list[self.pos] == "Bed":
@@ -104,7 +107,7 @@ class Bird:
                 self.stomach_content += wtw_intake
 
                 # update energy gain
-                self.energy_gain += energy_intake * self.model.FractionTakenUp
+                self.energy_gain += energy_intake
 
         # digestion
         self.stomach_content -= min(self.max_digestive_rate, self.stomach_content) # todo: worms zitten hier niet in
@@ -126,6 +129,7 @@ class Bird:
             # apply death if weight becomes too low todo: ook per tidal cycle
             if self.weight < self.minimum_weight: #todo: this should be something else maybe?
                 self.model.schedule.remove(self)
+
 
     def capture_rate_mussel(self, mussel_density, prey_dry_weight, density_competitors, local_dominance):
         """Calculate capture rate for mussel patch on Wadden Sea.
@@ -276,7 +280,7 @@ class Bird:
         energy_goal = weight_energy_requirement # todo: unnessesary variable just for clarity
 
         # calculate normal energy requirements
-        energy_goal += self.energy_requirements_one_time_step(mean_T) * self.model.steps_per_tidal_cycle
+        energy_goal += self.energy_requirements_one_time_step(mean_T) * self.model.steps_per_tidal_cycle # todo: dit moet data drivennnnnnn
         return energy_goal
 
     def consume_mussel_diet(self, density_of_competitors, local_dominance):
@@ -331,10 +335,10 @@ class Bird:
             intake_wtw *= fraction_needed
             energy_intake *= fraction_needed
 
-
-
-        # # update patch density todo: dit hoeft er niet meer in bij mossels
-        # self.model.prey[self.pos]["mussel_density"] -= num_prey_captured / self.model.patch_areas[self.pos]
+            # update foraging time
+            self.time_foraged += fraction_needed
+        else:
+            self.time_foraged += 1
         return intake_wtw, energy_intake
 
     def consume_mudflats_diet(self):
@@ -395,6 +399,11 @@ class Bird:
             final_captured_kok2 *= fraction_needed
             final_captured_kokmj *= fraction_needed
             final_captured_mac *= fraction_needed
+
+            # update foraging time
+            self.time_foraged += fraction_needed
+        else:
+            self.time_foraged += 1
 
         # deplete prey
         self.model.prey[self.pos]["kok1"] -= final_captured_kok1 / self.model.patch_areas[self.pos]
@@ -487,20 +496,37 @@ class Bird:
 
         # intake from Stillman (also used in webtics) % todo: dit hoeft niet elke keer worden te berekent
         afdw_intake_grassland = (0.53 * 60 * self.model.resolution_min) / 1000 # g / time step 10 mins, Stillman2000
-        print("afdw", afdw_intake_grassland)
 
         # wtw intake % todo: dit hoeft niet elke keer te worden berekent
         wtw_intake = afdw_intake_grassland * 1 / conversion_afdw_wtw # g / time step
-        print("wet weight", wtw_intake)
 
         # calculate possible wtw intake based on stomach left and digestive rate
         possible_wtw_intake = self.calculate_possible_intake()  # g / time step
 
         # intake is minimum of possible intake and intake achievable on patch
-        final_intake_wtw = min(wtw_intake, possible_wtw_intake)  # WtW intake in g
+        final_intake_wtw = min(wtw_intake, possible_wtw_intake) * self.model.FractionTakenUp # WtW intake in g
 
         # calculate energy intake, multiply with fraction of possible intake divided by max intake
         energy_intake = (afdw_intake_grassland * self.model.AFDWenergyContent) * final_intake_wtw / wtw_intake # kJ
+
+        # check if energy gain does not exceed goal, if so, adapt intake #todo: VOER DIT DOOR NAAR FOERAGEERTIJD
+        # TODO dit ff in functie?
+        if self.energy_gain + energy_intake > self.energy_goal:
+            # calculate surplus
+            surplus = self.energy_gain + energy_intake - self.energy_goal
+
+            # fraction of this time step needed to accomplish goal
+            fraction_needed = 1 - (surplus / energy_intake)
+
+            # multiply all intakes with fraction needed
+            final_intake_wtw *= fraction_needed
+            energy_intake *= fraction_needed
+
+            # update foraging time
+            self.time_foraged += fraction_needed
+        else:
+            self.time_foraged += 1
+
         return final_intake_wtw, energy_intake
 
     @staticmethod

@@ -28,20 +28,6 @@ def initiate_model(env_data_path, patch_data_path):
     model = OystercatcherModel(params, patch_name_list, prey, area_of_patches, df_env, df_patch)
     return model
 
-
-# def run_model(model, num_steps):
-#     """ Runs the model with a given data set for the patches and the environment
-#     """
-#
-#     print("Initial number birds: {}".format(model.init_birds))
-#
-#     # simulate for given number of num_steps
-#     for i in range(num_steps): #todo: geef hier aantal stappen in df mee
-#         model.step()
-#
-#     print("Final number of birds: {}".format(model.schedule.get_agent_count()))
-
-
 if __name__ == "__main__":
 
     # location of environmental data
@@ -56,13 +42,35 @@ if __name__ == "__main__":
     model = initiate_model(env_data_path, patch_data_path)
     model.run_model()
 
-    print(np.mean(model.schedule.agents[0].weight_throughout_cycle))
+    # load environmental data todo: dit kan later weg
+    df_env = pd.read_pickle(env_data_path)
 
-    # plot something
-    plt.figure(1)
-    plt.plot(model.schedule.agents[0].weight_throughout_cycle, label="weight")
-    plt.legend()
-    plt.figure(2)
-    plt.plot(model.schedule.agents[0].stomach_content_list, label="stomach contents")
-    plt.legend()
+    df_high_water = df_env[df_env.extreem == 'HW']
+    df_high_water.reset_index(inplace=True)
+
+    # plot reference weight from data, weight from simulation, foragingtime, temperature?
+    fig, ax = plt.subplots(2, 2)
+    ax[0, 0].plot(df_high_water.weight,  color='purple')
+    ax[0, 0].set_title('Reference weight from data')
+    ax[0, 0].set_xlabel('time')
+
+    ax[0, 1].plot(model.schedule.agents[0].weight_throughout_cycle)
+    ax[0, 1].set_title('Weight throughout simulation')
+    ax[0, 1].set_ylabel('gram')
+
+    ax[1, 0].plot(np.array(model.schedule.agents[0].foraging_time_per_cycle[1:])/2, 'go', markersize=2)
+    ax[1, 0].set_title('Foraging time per cycle')
+    ax[1, 0].set_ylabel('Hours')
+
+    ax[1, 1].plot(model.schedule.agents[0].stomach_content_list, 'ro', markersize=2)
+    ax[1, 1].set_title('Stomach contents')
+    fig.suptitle('Grassland')
+    fig.tight_layout()
+    fig.subplots_adjust(top=0.88)
+    plt.savefig('test')
+
+
+
+    print(model.schedule.agents[0].stomach_content_list)
+
     plt.show()
