@@ -46,7 +46,7 @@ if __name__ == "__main__":
 
     # location of environmental data
     env_data_dir = 'C:/Users/Marleen/Documents/thesis project/oystercatcher-model/Input data/'
-    env_data_filename = '2017_9_1_to_2017_9_10.pkl'
+    env_data_filename = '2017_9_1_to_2018_3_1.pkl'
     env_data_path = env_data_dir + env_data_filename
 
     # location of patch data

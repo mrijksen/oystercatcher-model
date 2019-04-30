@@ -79,3 +79,15 @@ def create_random_prey(params, patch_name_list):
         elif patch == "Grassland":
             prey.append(np.nan)
     return prey
+
+
+def create_data_lists_env_data(df_env):
+    """ Creates lists of input data to run the model with
+    """
+    temperature_data = [x for x in df_env.temperature]
+    weight_data = [x for x in df_env.weight]
+    waterheight_data = [x for x in df_env.waterheight]
+    steps_in_cycle_data = [x for x in df_env.time_steps_in_cycle]
+    steps_low_tide_data = [x for x in df_env.time_steps_to_low_tide]
+    extreem_data = [x for x in df_env.extreem]
+    return temperature_data, weight_data, waterheight_data, steps_in_cycle_data, steps_low_tide_data, extreem_data

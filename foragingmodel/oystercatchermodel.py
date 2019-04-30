@@ -10,6 +10,8 @@ from model import Model
 
 import random
 
+import data
+
 from collections import defaultdict
 import numpy as np
 
@@ -42,7 +44,9 @@ class OystercatcherModel(Model):
         self.LeftOverShellfish = 0.1
 
         self.temperature = params["temperature"] #todo: moet in data set komen
-        self.reference_weight_birds = params["reference_weight"] #todo: moet in data set komen
+        # self.temperature = None
+        # self.reference_weight_birds = params["reference_weight"] #todo: moet in data set komen
+        self.reference_weight_birds = None
 
         # tidal cycle parameters and total number of model steps
         self.num_tidal_cycles = params["num_tidal_cycles"]
@@ -63,7 +67,8 @@ class OystercatcherModel(Model):
         self.agents_on_patches = [[] for _ in range(self.num_patches)] #todo: kan dit misschien sneller? met arrays?
 
         # keep track of time steps within current tidal cycle
-        self.time_in_cycle = None
+        # self.time_in_cycle = None
+        self.new_tidal_cycle = None
 
         # use schedule from schedule.py that randomly activates agents
         self.schedule = RandomActivation(self)
@@ -81,9 +86,14 @@ class OystercatcherModel(Model):
         self.macoma_init_wtw = 1.05
         self.macoma_wtw = 1.05
 
-
         # handling time macoma
         self.handling_time_macoma = self.calculate_handling_time_macoma()
+
+        # turn environmental input data in lists
+        self.temperature_data, self.weight_data, self.waterheight_data, self.steps_in_cycle_data, \
+        self.steps_low_tide_data, self.extreem_data = data.create_data_lists_env_data(env_data)
+
+        self.time_in_cycle = 0
 
         # create birds
         for i in range(self.init_birds):
@@ -108,10 +118,16 @@ class OystercatcherModel(Model):
             self.schedule.add(bird)
 
     def step(self): # todo: make this part data driven
-        print(self.schedule.time)
+        time_step = self.schedule.time
 
-        # update time step within cycle
-        self.time_in_cycle = self.schedule.time % self.steps_per_tidal_cycle
+        # # update time step within cycle
+        # self.time_in_cycle = self.schedule.time % self.steps_per_tidal_cycle # todo: dit moeten we ff veranderen
+
+        # check if new tidal cycle starts
+        if self.extreem_data[time_step] == 'HW':
+            self.time_in_cycle = 0
+            self.new_tidal_cycle = True
+            self.reference_weight_birds = self.weight_data[time_step]
 
         # calculate wet weight mussels with formula
 
@@ -145,7 +161,7 @@ class OystercatcherModel(Model):
 
         # execute model.step (move agents and let them eat) todo: pas schedule aan
         self.schedule.step()
-
+        self.time_in_cycle += 1
         # collect data on patches and agents
         # maak paar datacollectie functies en roep die aan
         # maak defaultdict
