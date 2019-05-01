@@ -56,7 +56,8 @@ class Bird:
             self.weight_throughout_cycle.append(self.weight)
 
             # calculate goal and determine energy already gained
-            self.energy_goal = self.energy_goal_coming_cycle(self.model.temperature) #todo: what temperature?
+            self.energy_goal = self.energy_goal_coming_cycle(self.model.temperature,
+                                                             self.model.total_number_steps_in_cycle) #todo: what temperature?
             self.energy_gain = self.stomach_content * self.model.RatioAFDWtoWet * self.model.AFDWenergyContent
 
             # keep track of time foraged within coming cycle
@@ -259,11 +260,11 @@ class Bird:
         # return final energy requirement
         return max(E_t, E_m)
 
-    def energy_goal_coming_cycle(self, mean_T): #todo: over 1 or 2 tidal cycles? 2 lijkt logisch, en handig als je dag en  nacht meeneemt
+    def energy_goal_coming_cycle(self, mean_T, num_steps_tidal_cycle): #todo: over 1 or 2 tidal cycles? 2 lijkt logisch, en handig als je dag en  nacht meeneemt
         """
         Method that calculates the energy goal of a bird for the coming tidal cycle.
 
-        :param mean_T: Contains mean temperature for coming or previous tidal cycle TODO: prev or coming?
+        :param mean_T: Contains mean temperature for coming tidal cycle
         :return:
         """
 
@@ -280,7 +281,7 @@ class Bird:
         energy_goal = weight_energy_requirement # todo: unnessesary variable just for clarity
 
         # calculate normal energy requirements
-        energy_goal += self.energy_requirements_one_time_step(mean_T) * self.model.steps_per_tidal_cycle # todo: dit moet data drivennnnnnn
+        energy_goal += self.energy_requirements_one_time_step(mean_T) * num_steps_tidal_cycle # todo: deze temperatuur moet aangepast
         return energy_goal
 
     def consume_mussel_diet(self, density_of_competitors, local_dominance):

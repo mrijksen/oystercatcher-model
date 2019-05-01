@@ -93,7 +93,8 @@ class OystercatcherModel(Model):
         self.temperature_data, self.weight_data, self.waterheight_data, self.steps_in_cycle_data, \
         self.steps_low_tide_data, self.extreem_data = data.create_data_lists_env_data(env_data)
 
-        self.time_in_cycle = 0
+        self.time_in_cycle = None
+        self.total_number_steps_in_cycle = None
 
         # create birds
         for i in range(self.init_birds):
@@ -103,9 +104,6 @@ class OystercatcherModel(Model):
 
             unique_id = self.next_id()
             dominance = unique_id # todo: should be taken from distribution/data
-
-            # initial energy
-            energy = 10 #todo: should be taken from distr/data
 
             # instantiate class
             bird = Bird(unique_id, pos, self, dominance)
@@ -118,16 +116,16 @@ class OystercatcherModel(Model):
             self.schedule.add(bird)
 
     def step(self): # todo: make this part data driven
-        time_step = self.schedule.time
 
-        # # update time step within cycle
-        # self.time_in_cycle = self.schedule.time % self.steps_per_tidal_cycle # todo: dit moeten we ff veranderen
+        # current time step
+        time_step = self.schedule.time
 
         # check if new tidal cycle starts
         if self.extreem_data[time_step] == 'HW':
             self.time_in_cycle = 0
             self.new_tidal_cycle = True
             self.reference_weight_birds = self.weight_data[time_step]
+            self.total_number_steps_in_cycle = self.steps_in_cycle_data[time_step]
 
         # calculate wet weight mussels with formula
 

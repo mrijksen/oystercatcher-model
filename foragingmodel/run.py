@@ -49,27 +49,29 @@ if __name__ == "__main__":
     df_high_water.reset_index(inplace=True)
 
     # plot reference weight from data, weight from simulation, foragingtime, temperature?
-    fig, ax = plt.subplots(2, 2)
-    ax[0, 0].plot(df_high_water.weight,  color='purple')
-    ax[0, 0].set_title('Reference weight from data')
-    ax[0, 0].set_xlabel('time')
+    fig, ax = plt.subplots(3, 1)
+    ax[0].plot(df_high_water.weight,  color='purple', label="reference weight")
+    ax[0].set_title('Reference weight from data')
+    ax[0].plot(model.schedule.agents[0].weight_throughout_cycle, label="actual weight")
+    ax[0].legend()
+    ax[0].set_ylabel('Gram')
 
-    ax[0, 1].plot(model.schedule.agents[0].weight_throughout_cycle)
-    ax[0, 1].set_title('Weight throughout simulation')
-    ax[0, 1].set_ylabel('gram')
+    ax[1].plot(np.array(model.schedule.agents[0].foraging_time_per_cycle[1:])/2, 'go', markersize=2)
+    ax[1].set_title('Time spend foraging')
+    ax[1].set_ylabel('Hours')
+    ax[1].set_ylim(0, 15)
 
-    ax[1, 0].plot(np.array(model.schedule.agents[0].foraging_time_per_cycle[1:])/2, 'go', markersize=2)
-    ax[1, 0].set_title('Foraging time per cycle')
-    ax[1, 0].set_ylabel('Hours')
 
-    ax[1, 1].plot(model.schedule.agents[0].stomach_content_list, 'ro', markersize=2)
-    ax[1, 1].set_title('Stomach contents')
-    fig.suptitle('Grassland')
+    ax[2].plot(df_high_water.time_steps_in_cycle / 2, 'ro', markersize=2)
+    ax[2].set_title('Duration of tidal cycle')
+    ax[2].set_ylabel('Hours')
+    ax[2].set_ylim(0, 15)
+    ax[2].set_xlabel('Tidal cycle number')
+
+    fig.suptitle('Mussel bed')
     fig.tight_layout()
     fig.subplots_adjust(top=0.88)
     plt.savefig('test')
-
-
 
     print(model.schedule.agents[0].stomach_content_list)
 
