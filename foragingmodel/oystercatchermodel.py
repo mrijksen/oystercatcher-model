@@ -18,7 +18,9 @@ import numpy as np
 
 class OystercatcherModel(Model):
 
-    def __init__(self, params, patch_name_list, prey_densities, patch_areas, env_data, patch_data):
+    # def __init__(self, params, patch_name_list, prey_densities, patch_areas, env_data, patch_data, patch_availability):
+
+    def __init__(self, params, df_patch_data, df_patch_availability, df_env):
         """ Create a new model with given parameters
         :param init_prey: list with initial prey on patches #todo: divide in diff prey
         :param availability: array with availability on all patches for all t
@@ -30,20 +32,18 @@ class OystercatcherModel(Model):
         super().__init__()
 
         # set parameters #todo: zet sommige dingen in param file
-        self.prey = prey_densities
+        # self.prey = prey_densities
         self.init_birds = params["init_birds"]
         self.mussel = params["mussel"]
         self.num_patches = params["num_patches"]
 
         # prey characteristics
-        self.init_mussel_dry_weight = params["init_mussel_dry_weight"]
-        self.init_mussel_wet_weight = params["init_mussel_wet_weight"]
         self.AFDWenergyContent = 22.5 # kJ/gram todo: in parameter file
         self.RatioAFDWtoWet = 0.16 # afdw per gram wet weight for cockles and mussel
         self.FractionTakenUp = 0.85  # Speakman1987, KerstenVisser1996, KerstenPiersma1987, ZwartsBlomert1996
-        self.LeftOverShellfish = 0.1
+        self.LeftOverShellfish = 0.1 # ZwartEnsKerstenetal1996
 
-        self.temperature = params["temperature"] #todo: moet in data set komen
+        # self.temperature = params["temperature"] #todo: moet in data set komen
         # self.temperature = None
         # self.reference_weight_birds = params["reference_weight"] #todo: moet in data set komen
         self.reference_weight_birds = None
@@ -76,25 +76,42 @@ class OystercatcherModel(Model):
         # todo: datacollector here
         self.data = defaultdict(list)
 
-        # cockle data
+        # cockle data todo: dit moet per patch gebeuren
         self.cockle_sizes = params["cockle_sizes"] # in mm todo: deze waardes moeten veranderen door de tijd
         self.handling_time_cockles = []
         self.cockle_fresh_weight = params["cockle_fresh_weight"]
         self.cockle_wet_weight = params["cockle_wet_weight"] # should be in g
 
         # macoma data
-        self.macoma_init_wtw = 1.05
-        self.macoma_wtw = 1.05
+        self.macoma_wtw = 1.05 # check dit even todo: dit moet per patch
+        self.handling_time_macoma = self.calculate_handling_time_macoma() # handling time macoma
 
-        # handling time macoma
-        self.handling_time_macoma = self.calculate_handling_time_macoma()
+        # mussel patches
+        self.mussel_density = 9999999 # infinitely rich mussel patches
+        self.mussel_wtw_gain = -0.0025 / (24 / (self.resolution_min / 60)) # wtw gain per time step, GossCustard2001
+        self.init_mussel_afdw = 0.850 # g AFDW GossCustard2001
+        self.init_mussel_wet_weight =  5.1 # g WtW calculated with conversion factor todo: conversion lambda voor schrijven?
 
-        # turn environmental input data in lists
-        self.temperature_data, self.weight_data, self.waterheight_data, self.steps_in_cycle_data, \
-        self.steps_low_tide_data, self.extreem_data = data.create_data_lists_env_data(env_data)
+        # create lists of environmental data input
+        self.temperature_data = df_env['temperature'].tolist()
+        self.weight_data = df_env['weight'].tolist()
+        self.waterheight_data = df_env['waterheight'].tolist()
+        self.steps_in_cycle_data = df_env['time_steps_in_cycle'].tolist()
+        self.steps_low_tide_data = df_env['time_steps_to_low_tide'].tolist()
+        self.extreem_data = df_env['extreem'].tolist()
+        self.one_y_fw_cockle_gr_data = df_env['1y_fw_cockle_growth'].tolist()
+        self.two_y_fw_cockle_gr_data = df_env['2y_fw_cockle_growth'].tolist()
+        self.one_y_wtw_cockle_gr_data = df_env['1y_wtw_cockle_growth'].tolist()
+        self.two_y_wtw_cockle_gr_data = df_env['2y_wtw_cockle_growth'].tolist()
+        self.proportion_macoma_data = df_env['proportion_macoma'].tolist()
 
+        # these parameters we get from the environmental data input
         self.time_in_cycle = None
         self.total_number_steps_in_cycle = None
+        self.waterheight = None
+        self.steps_to_low_tide = None
+        self.temperature = None
+        self.proportion_macoma = None
 
         # create birds
         for i in range(self.init_birds):
@@ -111,41 +128,48 @@ class OystercatcherModel(Model):
             # add agent to agent overview
             self.agents_on_patches[bird.pos].append(bird)
 
-            # place and add to schedule todo: place agent on something
+            # place and add to schedule todo: place agent according to ideal distribution
             self.num_agents_on_patches[pos] += 1
             self.schedule.add(bird)
 
-    def step(self): # todo: make this part data driven
+    def step(self):
 
         # current time step
         time_step = self.schedule.time
 
         # check if new tidal cycle starts
         if self.extreem_data[time_step] == 'HW':
+
+            # get new parameters from data file
             self.time_in_cycle = 0
             self.new_tidal_cycle = True
             self.reference_weight_birds = self.weight_data[time_step]
             self.total_number_steps_in_cycle = self.steps_in_cycle_data[time_step]
+            self.steps_to_low_tide = self.steps_low_tide_data[time_step]
+            self.temperature = self.temperature_data[time_step]
+            self.proportion_macoma = self.proportion_macoma_data[time_step]
+            # print(self.proportion_macoma)
 
-        # calculate wet weight mussels with formula
+            # calculate wet weight mussels with self.mussel_wtw_gain # todo: dit moet per patch
 
-        # calculate new fresh weight cockles with extrapolation
+            # calculate new fresh weight cockles with extrapolation
 
-        # calculate new size cockles (mm) with formula that relates fresh weight to length
+            # calculate new size cockles (mm) with formula that relates fresh weight to length
 
-        # calculate wet weight cockles (g)
+            # calculate wet weight cockles (g)
 
-        # calculate handling time cockles
-        self.handling_time_cockles = []
-        for size in self.cockle_sizes:
-            self.handling_time_cockles.append(self.calculate_handling_time_cockles(size))
+            # calculate handling time cockles
+            self.handling_time_cockles = []
+            for size in self.cockle_sizes:
+                self.handling_time_cockles.append(self.calculate_handling_time_cockles(size))
 
-        # calculate handling time macoma
+            # calculate handling time macoma
 
+            # todo: misschien als we geen interferentie meenemen hier de intake rate voor mudflats berekenen?
+            # todo: sowieso voor elke patch de non-interference IR berekenen?
 
-
-        # todo: hier mossel kokkel gewicht updaten
-        # todo: misschien als we geen interferentie meenemen hier de intake rate voor mudflats berekenen?
+        # get new waterheight every time step
+        self.waterheight = self.waterheight_data[time_step]
 
         # if self.schedule.time % self.steps_per_tidal_cycle == 0:
         #     print("New tidal cycle!", "schedule time: ", self.schedule.time)
@@ -160,12 +184,11 @@ class OystercatcherModel(Model):
         # execute model.step (move agents and let them eat) todo: pas schedule aan
         self.schedule.step()
         self.time_in_cycle += 1
-        # collect data on patches and agents
+
         # maak paar datacollectie functies en roep die aan
-        # maak defaultdict
+        # todo maak defaultdict for data collection
 
         self.new_tidal_cycle = False
-
 
     def run_model(self):
         """ Run the model for the time steps indicated in the data set
@@ -208,7 +231,7 @@ class OystercatcherModel(Model):
         leoC = 1.79206
         return leoB * (cockle_size ** leoC)
 
-    def calculate_handling_time_macoma(self):
+    def calculate_handling_time_macoma(self): # todo: gewicht voor macoma balthica verschilt per patch
         """ Helper method to calculate handling time for macoma balthica.
 
             Currently this handling time is only based on the initial weight of macoma balthica.
@@ -219,6 +242,6 @@ class OystercatcherModel(Model):
         # parameters
         hiddinkA = 0.000625     # by Hiddink2003
         hiddinkB = 0.000213     # handling parameter (Hiddink2003)
-        return (hiddinkB / hiddinkA) * (1000 * self.macoma_init_wtw * self.RatioAFDWtoWet)
+        return (hiddinkB / hiddinkA) * (1000 * self.macoma_wtw * self.RatioAFDWtoWet)
 
 

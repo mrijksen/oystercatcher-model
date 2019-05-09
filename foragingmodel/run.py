@@ -5,51 +5,76 @@ import numpy as np
 import pandas as pd
 
 
-def initiate_model(env_data_path, patch_data_path):
+
+def initiate_model(start_year, run_type='real_data'):
     """ Instantiate model class """
 
     # get parameters todo: dit ook in path zetten?
     params = data.get_params()
+    if run_type == 'artificial':
 
-    # load patches data todo: hier moeten we dus de echte patch data gaan laden
-    patch_name_list = data.create_patch_list(params)
-    prey = data.create_random_prey(params, patch_name_list)
+        # load patches data todo: hier moeten we dus de echte patch data gaan laden
+        patch_name_list = data.create_patch_list(params)
+        prey = data.create_random_prey(params, patch_name_list)
 
-    # area for all patches todo: hier dus de echte data
-    area_of_patches = data.get_random_area(params)
+        # area for all patches todo: hier dus de echte data
+        area_of_patches = data.get_random_area(params)
 
-    # load environmental data
-    df_env = pd.read_pickle(env_data_path)
+        # load environmental data
+        df_env = data.get_environmental_data(start_year)
 
-    # load patch data todo
-    df_patch = None
+        # load patch data todo
+        df_patch = None
+
+        # load patch availability
+        df_patch_availability = data.get_patch_availability(start_year)
+
+    else:
+
+        # load artificial patch data
+        df_patch_data = data.get_artificial_patch_data()
+
+        # load environmental data
+        df_env = data.get_part_of_environmental_data()
+
+        # load artificial availability
+        df_patch_availability = data.get_artificial_patch_availability()
+
 
     # instantiate model
-    model = OystercatcherModel(params, patch_name_list, prey, area_of_patches, df_env, df_patch)
+    # model = OystercatcherModel(params, patch_name_list, prey, area_of_patches, df_env, df_patch, df_patch_availability)
+    model = OystercatcherModel(params, df_patch_data, df_patch_availability, df_env)
     return model
 
 if __name__ == "__main__":
 
-    # location of environmental data
-    env_data_dir = 'C:/Users/Marleen/Documents/thesis project/oystercatcher-model/Input data/'
-    env_data_filename = '2017_9_1_to_2018_3_1.pkl'
-    env_data_path = env_data_dir + env_data_filename
+    # run parameters
+    start_year = 2017
+    artificial_run = False
 
-    # location of patch data
-    patch_data_path = 1
+    if artificial_run:
 
-    # initiate and run model
-    model = initiate_model(env_data_path, patch_data_path)
+        # initiate and run model
+        model = initiate_model(start_year, run_type='artificial')
+
+    else:
+
+        # initiate and run model
+        model = initiate_model(start_year)
     model.run_model()
 
     # load environmental data todo: dit kan later weg
+    # location of environmental data todo: dit ook in data.py zetten? en alleen startjaar meegevem?
+    env_data_dir = 'C:/Users/Marleen/Documents/thesis project/oystercatcher-model/Input data/'
+    env_data_filename = '{}_9_1_to_{}_3_1.pkl'.format(start_year, start_year + 1)
+    env_data_path = env_data_dir + env_data_filename
     df_env = pd.read_pickle(env_data_path)
 
     df_high_water = df_env[df_env.extreem == 'HW']
     df_high_water.reset_index(inplace=True)
 
     # plot reference weight from data, weight from simulation, foragingtime, temperature?
-    fig, ax = plt.subplots(3, 1)
+    fig, ax = plt.subplots(4, 1)
     ax[0].plot(df_high_water.weight,  color='purple', label="reference weight")
     ax[0].set_title('Reference weight from data')
     ax[0].plot(model.schedule.agents[0].weight_throughout_cycle, label="actual weight")
@@ -66,13 +91,17 @@ if __name__ == "__main__":
     ax[2].set_title('Duration of tidal cycle')
     ax[2].set_ylabel('Hours')
     ax[2].set_ylim(0, 15)
-    ax[2].set_xlabel('Tidal cycle number')
 
-    fig.suptitle('Mussel bed')
+
+    ax[3].plot(df_high_water.temperature)
+    ax[3].set_xlabel('Tidal cycle number')
+
+
+    # fig.suptitle('Mussel bed')
     fig.tight_layout()
     fig.subplots_adjust(top=0.88)
     plt.savefig('test')
 
-    print(model.schedule.agents[0].stomach_content_list)
+    # print(model.schedule.agents[0].stomach_content_list)
 
     plt.show()

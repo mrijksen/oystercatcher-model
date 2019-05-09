@@ -21,7 +21,7 @@ class Bird:
 
         # stomach, weight, energy goal
         self.stomach_content = 0 # g todo: waarmee initialiseren?
-        self.weight = 550 # g
+        self.weight = 500 # todo: webtics, klopt dit?
         self.energy_goal = None #kJ
         self.energy_gain = 0 # energy already foraged kJ
 
@@ -31,7 +31,7 @@ class Bird:
         self.deposition_efficiency = 0.75  # WEBTICS page 57
         self.BodyGramEnergyCont = 34.295  # kJ/gram fat todo: moet dit niet een soort rate zijn? Nu kan het oneindig snel van en naar gewicht gaan
         self.BodyGramEnergyReq = 45.72666666  # kJ/gram (25% larger)
-        self.minimum_weight = 30 # todo
+        self.minimum_weight = 400 # todo: klopt dit? dit is van webtics?
         self.max_stomach_content = 80 # g WtW KerstenVisser1996
 
         # get some data
@@ -92,6 +92,7 @@ class Bird:
             # intake rate mudflat
             elif self.model.patch_name_list[self.pos] == "Mudflat":
                 wtw_intake, energy_intake = self.consume_mudflats_diet()
+                print(energy_intake)
 
                 # update stomach content (add wet weight)
                 self.stomach_content += wtw_intake
@@ -198,9 +199,12 @@ class Bird:
         """
 
         # parameters
-        competitors_threshold = 0 # density of competitors above which interference occurs
+        competitors_threshold = 0 # density of competitors above which interference occurs ha-1
         a = 0.437 # parameters for stabbers as described by Stillman 1996
         b = -0.00721 #todo: check 587 for threshold
+
+        # set density competitors to ha
+        density_competitors = density_competitors * 10000
 
         # calculate relative intake rate
         if density_competitors > competitors_threshold:
@@ -297,7 +301,7 @@ class Bird:
 
         # capture and intake rate including interference todo: voeg andere IRs toe afhankelijk van dieet
         patch_capture_rate = self.capture_rate_mussel(self.model.prey[self.pos]["mussel_density"],
-                                                     self.model.init_mussel_dry_weight, density_of_competitors,
+                                                     self.model.init_mussel_afdw, density_of_competitors,
                                                      local_dominance)
                                                         # todo: verander input, niet nodig om density of prey te geven
 
@@ -372,7 +376,10 @@ class Bird:
         intake_wtw = min(total_patch_intake_wet_weight, possible_wtw_intake)   # WtW intake in g
 
         # compare final intake to original patch intake todo: dit is nu wat moeilijker, mss met fracties?
-        fraction_possible_final_intake = intake_wtw / total_patch_intake_wet_weight
+        if total_patch_intake_wet_weight > 0:
+            fraction_possible_final_intake = intake_wtw / total_patch_intake_wet_weight
+        else:
+            fraction_possible_final_intake = 0
 
         # calculate final number of prey eaten
         final_captured_kok1 = capture_rate_kok1 * conversion_s_to_timestep * fraction_possible_final_intake
@@ -449,7 +456,7 @@ class Bird:
         capture_rate_kokmj_den = attack_rate * kokmj_handling_time * kokmj_density
 
         # capture rate macoma
-        capture_rate_mac_num = hiddinkA * mac_density
+        capture_rate_mac_num = hiddinkA * mac_density * self.model.proportion_macoma # only take available macoma into account
         capture_rate_mac_den = capture_rate_mac_num * mac_handling_time
 
         # final denominator 5.9 webtics
