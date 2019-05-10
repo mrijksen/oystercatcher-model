@@ -43,6 +43,7 @@ class Bird:
     def step(self): # todo:
         """A model step. Move, then eat. """
         # print("Agent id:", self.unique_id, "pos:", self.pos, "weight:", self.weight)
+        # print(self.model.patch_types[self.pos])
 
         # determine energy goal at start of new tidal cycle and set gain to zero
         # if self.model.time_in_cycle == 0:
@@ -70,7 +71,7 @@ class Bird:
         if self.model.time_in_cycle >= self.start_foraging and self.energy_gain < self.energy_goal: #todo: move if patch not available
 
             # intake rate mussel bed
-            if self.model.patch_name_list[self.pos] == "Bed":
+            if self.model.patch_types[self.pos] == "Bed":
 
                 # num of other agents and calculate local dominance
                 num_agents_on_patch, local_dominance = self.calculate_local_dominance(
@@ -90,20 +91,25 @@ class Bird:
                 self.energy_gain += energy_intake
 
             # intake rate mudflat
-            elif self.model.patch_name_list[self.pos] == "Mudflat":
+            elif self.model.patch_types[self.pos] == "Mudflat":
                 wtw_intake, energy_intake = self.consume_mudflats_diet()
-                print(energy_intake)
 
                 # update stomach content (add wet weight)
                 self.stomach_content += wtw_intake
 
                 # update energy gain (everything that is eaten)
-                self.energy_gain += wtw_intake * self.model.FractionTakenUp * self.model.RatioAFDWtoWet \
-                                    * self.model.AFDWenergyContent
+                # self.energy_gain += wtw_intake * self.model.FractionTakenUp * self.model.RatioAFDWtoWet \
+                #                     * self.model.AFDWenergyContent
+                self.energy_gain += energy_intake
 
             # intake rate grasslands
-            elif self.model.patch_name_list[self.pos] == "Grassland":
-                wtw_intake, energy_intake = self.consume_grassland_diet()
+            elif self.model.patch_types[self.pos] == "Grassland":
+
+                # intake rate becomes zero at low temperatures
+                if self.model.temperature < 0:
+                    wtw_intake, energy_intake = [0, 0]
+                else:
+                    wtw_intake, energy_intake = self.consume_grassland_diet()
 
                 # update stomach content (add wet weight)
                 self.stomach_content += wtw_intake
@@ -115,11 +121,11 @@ class Bird:
         self.stomach_content -= min(self.max_digestive_rate, self.stomach_content) # todo: worms zitten hier niet in
 
         # at the end of the tidal cycle update weight todo: hier moet de temperatuur op een juiste manier in.
-        if self.model.time_in_cycle == self.model.steps_per_tidal_cycle - 1: # check if this is correct
+        if self.model.time_in_cycle == self.model.total_number_steps_in_cycle - 1: # check if this is correct
 
             # energy consumption
             energy_consumed = self.energy_requirements_one_time_step(self.model.temperature) \
-                              * self.model.steps_per_tidal_cycle # todo: dit hangt dus van tidal cycle af
+                              * self.model.total_number_steps_in_cycle # todo: dit hangt dus van tidal cycle af
 
             # update weight
             energy_difference = self.energy_gain - energy_consumed
@@ -133,7 +139,7 @@ class Bird:
                 self.model.schedule.remove(self)
 
 
-    def capture_rate_mussel(self, mussel_density, prey_dry_weight, density_competitors, local_dominance):
+    def capture_rate_mussel(self, prey_dry_weight, density_competitors, local_dominance):
         """Calculate capture rate for mussel patch on Wadden Sea.
 
         Functional response is derived from WEBTICS.
@@ -155,7 +161,7 @@ class Bird:
         interference = self.interference_stillman(density_competitors, local_dominance)
 
         # calculate capture rate and include interference
-        capture_rate = self.functional_response_mussel(attack_rate, mussel_density, prey_dry_weight, max_intake_rate)
+        capture_rate = self.functional_response_mussel(attack_rate, self.model.mussel_density, prey_dry_weight, max_intake_rate)
         final_capture_rate = capture_rate * interference
         return final_capture_rate
 
@@ -199,7 +205,7 @@ class Bird:
         """
 
         # parameters
-        competitors_threshold = 0 # density of competitors above which interference occurs ha-1
+        competitors_threshold = 158 # density of competitors above which interference occurs ha-1 todo: welke nemen?
         a = 0.437 # parameters for stabbers as described by Stillman 1996
         b = -0.00721 #todo: check 587 for threshold
 
@@ -212,6 +218,7 @@ class Bird:
             relative_intake_rate = ((density_competitors + 1) / (competitors_threshold + 1)) ** -m
         else:
             relative_intake_rate = 1
+
         return relative_intake_rate
 
     def calculate_local_dominance(self, model):
@@ -219,6 +226,8 @@ class Bird:
         Method that calculates local dominance (# of encounters won) for patch agent is currently on
 
         Returns number of other agents on same patch and number of encounters won (L)
+
+        Higher dominance number means more dominance.
         """
 
         # find dominance of all agents on same patch (excluding self)
@@ -300,13 +309,12 @@ class Bird:
         # check if energy goal is met
 
         # capture and intake rate including interference todo: voeg andere IRs toe afhankelijk van dieet
-        patch_capture_rate = self.capture_rate_mussel(self.model.prey[self.pos]["mussel_density"],
-                                                     self.model.init_mussel_afdw, density_of_competitors,
-                                                     local_dominance)
+        patch_capture_rate = self.capture_rate_mussel(self.model.mussel_afdw, density_of_competitors,
+                                                     local_dominance) # todo: kies tussen self. of staticfunction
                                                         # todo: verander input, niet nodig om density of prey te geven
 
         # wet intake rate
-        patch_wet_intake = patch_capture_rate * self.model.init_mussel_wet_weight # g WtW/s
+        patch_wet_intake = patch_capture_rate * self.model.mussel_wet_weight # g WtW/s
         patch_wet_intake *= (1 - self.model.LeftOverShellfish)
 
         # get total capture rate/IRs in one time step
@@ -358,11 +366,11 @@ class Bird:
         capture_rate_kok1, capture_rate_kok2, capture_rate_kokmj, capture_rate_mac \
             = self.combined_capture_rate_cockle_macoma()
 
-        # wet weight intake rate (g/s)
-        patch_wet_intake = capture_rate_kok1 * self.model.cockle_wet_weight[0] \
-                             + capture_rate_kok2 * self.model.cockle_wet_weight[1]\
-                             + capture_rate_kokmj * self.model.cockle_wet_weight[2]\
-                             + capture_rate_mac * self.model.macoma_wtw
+        # wet weight intake rate (g/s) #todo: wtw hangt van patch af
+        patch_wet_intake = capture_rate_kok1 * self.model.cockle_wet_weight[self.pos][0] \
+                             + capture_rate_kok2 * self.model.cockle_wet_weight[self.pos][1]\
+                             + capture_rate_kokmj * self.model.cockle_wet_weight[self.pos][2]\
+                             + capture_rate_mac * self.model.macoma_wet_weight[self.pos]
         patch_wet_intake *= (1 - self.model.LeftOverShellfish)
 
         # convert to intake rate of one time step
@@ -413,11 +421,11 @@ class Bird:
         else:
             self.time_foraged += 1
 
-        # deplete prey
-        self.model.prey[self.pos]["kok1"] -= final_captured_kok1 / self.model.patch_areas[self.pos]
-        self.model.prey[self.pos]["kok2"] -= final_captured_kok2 / self.model.patch_areas[self.pos]
-        self.model.prey[self.pos]["kokmj"] -= final_captured_kokmj / self.model.patch_areas[self.pos]
-        self.model.prey[self.pos]["mac"] -= final_captured_mac / self.model.patch_areas[self.pos]
+        # # deplete prey todo
+        # self.model.prey[self.pos]["kok1"] -= final_captured_kok1 / self.model.patch_areas[self.pos]
+        # self.model.prey[self.pos]["kok2"] -= final_captured_kok2 / self.model.patch_areas[self.pos]
+        # self.model.prey[self.pos]["kokmj"] -= final_captured_kokmj / self.model.patch_areas[self.pos]
+        # self.model.prey[self.pos]["mac"] -= final_captured_mac / self.model.patch_areas[self.pos]
 
         return intake_wtw, energy_intake
 
@@ -430,16 +438,17 @@ class Bird:
         """
 
         # get density and size of all cockle size classes on patch
-        kok1_density = self.model.prey[self.pos]["kok1"]
-        kok2_density = self.model.prey[self.pos]["kok2"]
-        kokmj_density = self.model.prey[self.pos]["kokmj"]
-        kok1_handling_time = self.model.handling_time_cockles[0]
-        kok2_handling_time = self.model.handling_time_cockles[1]
-        kokmj_handling_time = self.model.handling_time_cockles[2]
+        # kok1_density = self.model.prey[self.pos]["kok1"]
+        # kok2_density = self.model.prey[self.pos]["kok2"]
+        # kokmj_density = self.model.prey[self.pos]["kokmj"]
+        kok1_handling_time = self.model.handling_time_cockles[self.pos][0] # todo: one liner van maken
+        kok2_handling_time = self.model.handling_time_cockles[self.pos][1]
+        kokmj_handling_time = self.model.handling_time_cockles[self.pos][2]
+        kok1_density, kok2_density, kokmj_density = self.model.cockle_densities[self.pos]
 
         # macoma
-        mac_density = self.model.prey[self.pos]["mac"]
-        mac_handling_time = self.model.handling_time_macoma
+        mac_density = self.model.macoma_density[self.pos]
+        mac_handling_time = self.model.handling_time_macoma[self.pos]
 
         # parameters
         leoA = 0.000860373  # Zwarts et al. (1996b), taken from WEBTICS
@@ -471,7 +480,7 @@ class Bird:
         alpha = 0.4  # fitted parameter by webtics
         relative_intake = self.calculate_cockle_uptake_reduction(bird_density, attack_distance, alpha)
 
-        # calculate number of captured prey for each size class
+        # calculate number of captured prey for each size class todo: kan dit niet in betere vectorberekening?
         capture_rate_kok1 = (capture_rate_kok1_num / final_denominator) * relative_intake
         capture_rate_kok2 = (capture_rate_kok2_num / final_denominator) * relative_intake
         capture_rate_kokmj = (capture_rate_kokmj_num / final_denominator) * relative_intake

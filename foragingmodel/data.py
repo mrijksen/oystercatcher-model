@@ -103,14 +103,7 @@ def create_data_lists_env_data(df_env): # todo: this is unnessesary. also, just 
     return temperature_data, weight_data, waterheight_data, steps_in_cycle_data, steps_low_tide_data, extreem_data,\
            one_y_fw_cockle_gr, two_y_fw_cockle_gr, one_y_wtw_cockle_gr, two_y_wtw_cockle_gr, proportion_macoma
 
-def create_data_lists_patch_data(df_patches): # todo: this feels unnessecary
-    """ Creates lists of input patch data to run model with
-    """
-    patch_areas = df_patches['area']
-    type = df_patches['type']
-
-
-def get_patch_data(start_year):
+def get_patch_data(start_year): #todo: add grass & roost patch
     """ Load data frame with patch info for specific year.
 
     Patch characteristics are patchID, type, area, densities of prey
@@ -123,10 +116,10 @@ def get_patch_data(start_year):
                'Cockle_1j_FW', 'Cockle_1j_WW', 'Cockle_1j_dens',
                'Cockle_2j_FW', 'Cockle_2j_WW', 'Cockle_2j_dens',
                'Cockle_mj_FW', 'Cockle_mj_WW', 'Cockle_mj_dens',
-               'Macoma_WW', 'Macoma_dens', 'Macoma_dens']
+               'Macoma_WW', 'Macoma_dens']
     df_patches = df_patches[columns]
 
-    # remove patches with only zero densities
+    # remove patches with only zero prey densities
     columns = columns[3:]
     df_patches = df_patches.fillna(0)
     df_patches = df_patches[(df_patches[columns].T != 0).any()]
@@ -140,14 +133,22 @@ def get_artificial_patch_data():
     """ Artificial patch data, for testing purposes
     """
     artificial_patches = pd.DataFrame()
-    artificial_patches['patch_id'] = [1, 2]
-    artificial_patches['type'] = ['Bed', "Mudflat"]
-    artificial_patches['area'] = [10000, 10000]
-    artificial_patches['musselcover'] = [100, np.nan]
-    artificial_patches['Cockle_1j_dens'] = [np.nan, 15]
-    artificial_patches['Cockle_2j_dens'] = [np.nan, 15]
-    artificial_patches['Cockle_mj_dens'] = [np.nan, 50]
-    artificial_patches['Macoma_dens'] = [np.nan, 50]
+    artificial_patches['patchID'] = [1, 2, 3]
+    artificial_patches['type'] = ['Bed', "Mudflat", "Grassland"]
+    artificial_patches['area'] = [10000, 10000, 10000]
+    artificial_patches['musselcover'] = [100, np.nan, np.nan]
+    artificial_patches['Cockle_1j_dens'] = [np.nan, 15, np.nan]
+    artificial_patches['Cockle_2j_dens'] = [np.nan, 15, np.nan]
+    artificial_patches['Cockle_mj_dens'] = [np.nan, 50, np.nan]
+    artificial_patches['Macoma_dens'] = [np.nan, 50, np.nan]
+    artificial_patches['Cockle_1j_FW'] = [0, 5, np.nan]
+    artificial_patches['Cockle_2j_FW'] = [0, 5, np.nan]
+    artificial_patches['Cockle_mj_FW'] = [0, 10, np.nan]
+    artificial_patches['Cockle_1j_WW'] = [0, 1, np.nan]
+    artificial_patches['Cockle_2j_WW'] = [0, 1, np.nan]
+    artificial_patches['Cockle_mj_WW'] = [0, 5, np.nan]
+    artificial_patches['Macoma_WW'] = [0, 0.1, np.nan]
+    artificial_patches['Macoma_dens'] = [0, 10, np.nan]
 
     # sort and set index to patchID
     df_patches = artificial_patches.sort_values('patchID')
@@ -166,17 +167,28 @@ def get_environmental_data(start_year):
     df_env = pd.read_pickle(env_data_path)
     return df_env
 
-def get_patch_availability(start_year):
+def get_patch_availability(start_year, patchIDs): #todo: add grass roost patch
     """ Load patch availability data.
 
     The columns of this data frame are the patchIDs, the last column is the waterheight.
 
     The values indicate the fraction of the patch available for every waterheight.
     """
+
+    # get data and remove unnessecary column
     path = 'C:/Users/Marleen/Documents/thesis project/Data zaken/Data/Patch data/Patch_Exposure_Vlieland_{}.csv'.\
         format(start_year)
-    df_patch_availability = pd.read_csv(path, delimiter=",")
-    del df_patch_availability['Unnamed: 0']
+    df_patch_availability_data = pd.read_csv(path, delimiter=",")
+    del df_patch_availability_data['Unnamed: 0']
+
+    # set waterheight as index
+    df_patch_availability_data.set_index('waterheight')
+
+    # only get relevant columns (patches with nonzero entries)
+    df_patch_availability = df_patch_availability_data.iloc[:, patchIDs]
+
+    # todo: add patch availability voor graspatch (always 1)
+
     return df_patch_availability
 
 
@@ -187,9 +199,11 @@ def get_artificial_patch_availability():
     # make patches available if waterheight < 0
     artificial_availability = pd.DataFrame()
     artificial_availability['waterheight'] = np.arange(-300, 300, 1)
-    artificial_availability['1'] = np.nan
+    # artificial_availability['1'] = np.nan
     artificial_availability['1'] = np.where(artificial_availability.waterheight < 0, 1, 0)
     artificial_availability['2'] = np.where(artificial_availability.waterheight < 100, 1, 0)
+    artificial_availability['3'] = 1
+    artificial_availability.set_index('waterheight', inplace=True)
     return artificial_availability
 
 
@@ -199,7 +213,7 @@ def get_part_of_environmental_data():
 
     # location of environmental data todo: dit ook in data.py zetten? en alleen startjaar meegevem?
     env_data_dir = 'C:/Users/Marleen/Documents/thesis project/oystercatcher-model/Input data/'
-    env_data_filename = '{}_9_1_to_{}_3_1.pkl'
+    env_data_filename = '2017_9_1_to_2017_9_10.pkl'
     env_data_path = env_data_dir + env_data_filename
     df_env = pd.read_pickle(env_data_path)
     return df_env

@@ -13,6 +13,17 @@ def initiate_model(start_year, run_type='real_data'):
     params = data.get_params()
     if run_type == 'artificial':
 
+        # load artificial patch data
+        df_patch_data = data.get_artificial_patch_data()
+
+        # load environmental data
+        df_env = data.get_part_of_environmental_data()
+
+        # load artificial availability
+        df_patch_availability = data.get_artificial_patch_availability()
+
+    else:
+
         # load patches data todo: hier moeten we dus de echte patch data gaan laden
         patch_name_list = data.create_patch_list(params)
         prey = data.create_random_prey(params, patch_name_list)
@@ -29,16 +40,7 @@ def initiate_model(start_year, run_type='real_data'):
         # load patch availability
         df_patch_availability = data.get_patch_availability(start_year)
 
-    else:
-
-        # load artificial patch data
-        df_patch_data = data.get_artificial_patch_data()
-
-        # load environmental data
-        df_env = data.get_part_of_environmental_data()
-
-        # load artificial availability
-        df_patch_availability = data.get_artificial_patch_availability()
+        df_patch_data = 1
 
 
     # instantiate model
@@ -50,7 +52,7 @@ if __name__ == "__main__":
 
     # run parameters
     start_year = 2017
-    artificial_run = False
+    artificial_run = True
 
     if artificial_run:
 
@@ -63,14 +65,14 @@ if __name__ == "__main__":
         model = initiate_model(start_year)
     model.run_model()
 
-    # load environmental data todo: dit kan later weg
-    # location of environmental data todo: dit ook in data.py zetten? en alleen startjaar meegevem?
-    env_data_dir = 'C:/Users/Marleen/Documents/thesis project/oystercatcher-model/Input data/'
-    env_data_filename = '{}_9_1_to_{}_3_1.pkl'.format(start_year, start_year + 1)
-    env_data_path = env_data_dir + env_data_filename
-    df_env = pd.read_pickle(env_data_path)
+    # # load environmental data todo: dit kan later weg
+    # # location of environmental data todo: dit ook in data.py zetten? en alleen startjaar meegevem?
+    # env_data_dir = 'C:/Users/Marleen/Documents/thesis project/oystercatcher-model/Input data/'
+    # env_data_filename = '{}_9_1_to_{}_3_1.pkl'.format(start_year, start_year + 1)
+    # env_data_path = env_data_dir + env_data_filename
+    # df_env = pd.read_pickle(env_data_path)
 
-    df_high_water = df_env[df_env.extreem == 'HW']
+    df_high_water = model.df_env[model.df_env.extreem == 'HW']
     df_high_water.reset_index(inplace=True)
 
     # plot reference weight from data, weight from simulation, foragingtime, temperature?
@@ -93,7 +95,8 @@ if __name__ == "__main__":
     ax[2].set_ylim(0, 15)
 
 
-    ax[3].plot(df_high_water.temperature)
+    ax[3].plot(df_high_water.date_time.dt.date, df_high_water.temperature)
+    ax[3].set_title('Temperature')
     ax[3].set_xlabel('Tidal cycle number')
 
 
@@ -102,6 +105,6 @@ if __name__ == "__main__":
     fig.subplots_adjust(top=0.88)
     plt.savefig('test')
 
-    # print(model.schedule.agents[0].stomach_content_list)
+    print(np.mean(model.schedule.agents[0].foraging_time_per_cycle[1:]))
 
     plt.show()
