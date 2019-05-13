@@ -185,7 +185,7 @@ def get_patch_availability(start_year, patchIDs): #todo: add grass roost patch
     df_patch_availability_data.set_index('waterheight')
 
     # only get relevant columns (patches with nonzero entries)
-    df_patch_availability = df_patch_availability_data.iloc[:, patchIDs]
+    df_patch_availability = df_patch_availability_data.iloc[:, patchIDs - 1] #todo: check this
 
     # todo: add patch availability voor graspatch (always 1)
 
@@ -200,8 +200,8 @@ def get_artificial_patch_availability():
     artificial_availability = pd.DataFrame()
     artificial_availability['waterheight'] = np.arange(-300, 300, 1)
     # artificial_availability['1'] = np.nan
-    artificial_availability['1'] = np.where(artificial_availability.waterheight < 0, 1, 0)
-    artificial_availability['2'] = np.where(artificial_availability.waterheight < 100, 1, 0)
+    artificial_availability['1'] = np.where(artificial_availability.waterheight < 0, 1, 1)
+    artificial_availability['2'] = np.where(artificial_availability.waterheight < 0, 1, 1)
     artificial_availability['3'] = 1
     artificial_availability.set_index('waterheight', inplace=True)
     return artificial_availability
@@ -213,7 +213,7 @@ def get_part_of_environmental_data():
 
     # location of environmental data todo: dit ook in data.py zetten? en alleen startjaar meegevem?
     env_data_dir = 'C:/Users/Marleen/Documents/thesis project/oystercatcher-model/Input data/'
-    env_data_filename = '2017_9_1_to_2017_9_10.pkl'
+    env_data_filename = '2017_9_1_to_2018_3_1.pkl'
     env_data_path = env_data_dir + env_data_filename
     df_env = pd.read_pickle(env_data_path)
     return df_env

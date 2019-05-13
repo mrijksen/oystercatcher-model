@@ -77,30 +77,35 @@ if __name__ == "__main__":
 
     # plot reference weight from data, weight from simulation, foragingtime, temperature?
     fig, ax = plt.subplots(4, 1)
-    ax[0].plot(df_high_water.weight,  color='purple', label="reference weight")
-    ax[0].set_title('Reference weight from data')
-    ax[0].plot(model.schedule.agents[0].weight_throughout_cycle, label="actual weight")
+    ax[0].plot( df_high_water.weight,  color='purple', label="reference weight")
+    ax[0].set_title('Weight')
+    ax[0].plot( model.schedule.agents[0].weight_throughout_cycle, label="actual weight")
     ax[0].legend()
     ax[0].set_ylabel('Gram')
+    ax[0].set_xticklabels([])
 
-    ax[1].plot(np.array(model.schedule.agents[0].foraging_time_per_cycle[1:])/2, 'go', markersize=2)
+    ax[1].plot(np.array(model.schedule.agents[0].foraging_time_per_cycle)/2, 'go', markersize=2)
     ax[1].set_title('Time spend foraging')
     ax[1].set_ylabel('Hours')
     ax[1].set_ylim(0, 15)
+    ax[1].set_xticklabels([])
 
 
-    ax[2].plot(df_high_water.time_steps_in_cycle / 2, 'ro', markersize=2)
+    ax[2].plot(df_high_water.date_time.dt.date, df_high_water.time_steps_in_cycle / 2, 'ro', markersize=2)
     ax[2].set_title('Duration of tidal cycle')
     ax[2].set_ylabel('Hours')
     ax[2].set_ylim(0, 15)
+    ax[2].set_xticklabels([])
 
 
     ax[3].plot(df_high_water.date_time.dt.date, df_high_water.temperature)
     ax[3].set_title('Temperature')
-    ax[3].set_xlabel('Tidal cycle number')
+    ax[3].set_xlabel('Month')
+    ax[3].set_ylabel('Degrees Celsius')
 
+    # ax[4].plot(model.schedule.agents[0].start_foraging_list)
 
-    # fig.suptitle('Mussel bed')
+    fig.suptitle('Foraging on mussel bed')
     fig.tight_layout()
     fig.subplots_adjust(top=0.88)
     plt.savefig('test')

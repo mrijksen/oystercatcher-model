@@ -31,6 +31,7 @@ class OystercatcherModel(Model):
         # get data files
         self.patch_data = df_patch_data
         self.df_env = df_env
+
         self.df_patch_availability = df_patch_availability
 
         # set parameters #todo: zet sommige dingen in param file
@@ -74,6 +75,12 @@ class OystercatcherModel(Model):
         self.musselcover = df_patch_data['musselcover'].values # todo: add cover to capture rate/interference
         self.mussel_density = 999999 # infinite mussel density
 
+        # mussel patches
+        self.mussel_density = 9999999  # infinitely rich mussel patches
+        self.mussel_wtw_gain = -0.0025 / (24 / (self.resolution_min / 60))  # wtw gain per time step, GossCustard2001
+        self.mussel_afdw = 0.850  # g AFDW GossCustard2001 # todo: dit moet veranderen
+        self.mussel_wet_weight = self.mussel_afdw / self.RatioAFDWtoWet  # g WtW calculated with conversion factor
+
         # array with number of agents on every patch
         self.num_agents_on_patches = np.zeros(self.num_patches, dtype=int) #todo: misschien overbodig?
         self.agents_on_patches = [[] for _ in range(self.num_patches)] #todo: kan dit misschien sneller? met arrays?
@@ -83,12 +90,6 @@ class OystercatcherModel(Model):
 
         # todo: datacollector here
         self.data = defaultdict(list)
-
-        # mussel patches
-        self.mussel_density = 9999999 # infinitely rich mussel patches
-        self.mussel_wtw_gain = -0.0025 / (24 / (self.resolution_min / 60)) # wtw gain per time step, GossCustard2001
-        self.mussel_afdw = 0.850 # g AFDW GossCustard2001 # todo: dit moet veranderen
-        self.mussel_wet_weight = self.mussel_afdw / self.RatioAFDWtoWet # g WtW calculated with conversion factor
 
         # create lists of environmental data input
         self.temperature_data = df_env['temperature'].tolist()
@@ -122,7 +123,7 @@ class OystercatcherModel(Model):
 
             # give random initial position #todo: should be according to ideal distribution
             # pos = random.randrange(self.num_patches + 1)
-            pos = 2
+            pos = 0
 
             # give agent individual properties
             unique_id = self.next_id() # every agent has unique id
@@ -142,6 +143,12 @@ class OystercatcherModel(Model):
 
         # current time step
         time_step = self.schedule.time
+
+        # get new waterheight and patch availability
+        self.waterheight = self.waterheight_data[time_step]
+
+        # calculate available area for every patch
+        self.available_areas = self.df_patch_availability.loc[self.waterheight].values * self.patch_areas
 
         # check if new tidal cycle starts
         if self.extreem_data[time_step] == 'HW':
@@ -175,15 +182,11 @@ class OystercatcherModel(Model):
             # todo: misschien als we geen interferentie meenemen hier de intake rate voor mudflats berekenen?
             # todo: sowieso voor elke patch de non-interference IR berekenen?
 
-        # get new waterheight and patch availability
-        waterheight = self.waterheight_data[time_step]
 
-        # calculate available area for every patch
-        available_area = self.df_patch_availability.loc[waterheight].values * self.patch_areas
 
         # execute model.step (move agents and let them eat) todo: pas schedule aan
         self.schedule.step()
-        self.time_in_cycle += 1
+        self.time_in_cycle += 1 # time STEPS in cycle
 
         # maak paar datacollectie functies en roep die aan
         # todo maak defaultdict for data collection

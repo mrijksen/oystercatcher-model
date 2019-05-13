@@ -1,4 +1,5 @@
 import numpy as np
+import time
 
 class Bird:
     """
@@ -14,10 +15,9 @@ class Bird:
         # this should be read from data file
         self.dominance = dominance
         self.pos = pos
-
-        # variable indicating "when" agent starts foraging (time steps after start tidal cycle) todo: zet in mooie units
-        # self.start_foraging = 3 * 60 / model.resolution_min # todo: laat dit dus afhangen van laagwater
-        self.start_foraging = 0
+        # self.specialist = 'shellfish'
+        self.start_foraging = None # number of steps after high tide
+        self.time_foraged = 6 #todo: welke initialisatie waarde ?
 
         # stomach, weight, energy goal
         self.stomach_content = 0 # g todo: waarmee initialiseren?
@@ -37,20 +37,16 @@ class Bird:
         # get some data
         self.weight_throughout_cycle = []
         self.stomach_content_list = []
-        self.time_foraged = None
         self.foraging_time_per_cycle = []
+        self.start_foraging_list = []
 
-    def step(self): # todo:
+    def step(self): # todo: agent blijft foerageren als patch niet available is
         """A model step. Move, then eat. """
         # print("Agent id:", self.unique_id, "pos:", self.pos, "weight:", self.weight)
         # print(self.model.patch_types[self.pos])
 
         # determine energy goal at start of new tidal cycle and set gain to zero
-        # if self.model.time_in_cycle == 0:
         if self.model.new_tidal_cycle:
-
-            # collect foraging time data
-            self.foraging_time_per_cycle.append(self.time_foraged)
 
             # get some data
             self.stomach_content_list.append(self.stomach_content)
@@ -58,74 +54,96 @@ class Bird:
 
             # calculate goal and determine energy already gained
             self.energy_goal = self.energy_goal_coming_cycle(self.model.temperature,
-                                                             self.model.total_number_steps_in_cycle) #todo: what temperature?
-            self.energy_gain = self.stomach_content * self.model.RatioAFDWtoWet * self.model.AFDWenergyContent
+                                                             self.model.total_number_steps_in_cycle)
+            self.energy_gain = 0
 
+            # calculate when to start foraging
+            # print(self.model.df_env.iloc[self.model.schedule.time])
+            self.start_foraging = 0
+            # self.start_foraging = int(self.model.steps_to_low_tide - (self.time_foraged / 2))
+            # self.start_foraging_list.append(self.start_foraging)
             # keep track of time foraged within coming cycle
             self.time_foraged = 0
-
-            # # set new tidal bool to false todo : ja dit klopt ofc niet als er meer vogels zijn
-            # self.model.new_tidal_cycle = False
 
         # foraging
         if self.model.time_in_cycle >= self.start_foraging and self.energy_gain < self.energy_goal: #todo: move if patch not available
 
-            # intake rate mussel bed
-            if self.model.patch_types[self.pos] == "Bed":
+            # only forage if patch is available
+            if self.model.available_areas[self.pos] > 0:
 
-                # num of other agents and calculate local dominance
-                num_agents_on_patch, local_dominance = self.calculate_local_dominance(
-                    self.model)  # todo: num_agents moet geupdate worden
+                # intake rate mussel bed todo: check foraging conditions (is patch available, day & night?)
+                if self.model.patch_types[self.pos] == "Bed":
 
-                # calculate competitor density
-                density_of_competitors = num_agents_on_patch / self.model.patch_areas[
-                    self.pos]  # todo: in stillman is dit in ha, dit kan ook in functie calculate local dom
+                    # num of other agents and calculate local dominance
+                    num_agents_on_patch, local_dominance = self.calculate_local_dominance(
+                        self.model)  # todo: num_agents moet geupdate worden als agent verplaatst
 
-                # calculate intake
-                wtw_intake, energy_intake = self.consume_mussel_diet(density_of_competitors, local_dominance)
+                    # calculate competitor density
+                    density_of_competitors = num_agents_on_patch / self.model.available_areas[
+                        self.pos]
 
-                # update stomach content (add wet weight)
-                self.stomach_content += wtw_intake
+                    # calculate intake
+                    wtw_intake, energy_intake = self.consume_mussel_diet(density_of_competitors, local_dominance)
 
-                # update energy gain (everything that is eaten)
-                self.energy_gain += energy_intake
+                    # update stomach content (add wet weight)
+                    self.stomach_content += wtw_intake
 
-            # intake rate mudflat
-            elif self.model.patch_types[self.pos] == "Mudflat":
-                wtw_intake, energy_intake = self.consume_mudflats_diet()
+                    # update energy gain (everything that is eaten)
+                    self.energy_gain += energy_intake
 
-                # update stomach content (add wet weight)
-                self.stomach_content += wtw_intake
+                # intake rate mudflat
+                elif self.model.patch_types[self.pos] == "Mudflat":
+                    wtw_intake, energy_intake = self.consume_mudflats_diet()
 
-                # update energy gain (everything that is eaten)
-                # self.energy_gain += wtw_intake * self.model.FractionTakenUp * self.model.RatioAFDWtoWet \
-                #                     * self.model.AFDWenergyContent
-                self.energy_gain += energy_intake
+                    # update stomach content (add wet weight)
+                    self.stomach_content += wtw_intake
 
-            # intake rate grasslands
-            elif self.model.patch_types[self.pos] == "Grassland":
+                    # update energy gain (everything that is eaten)
+                    # self.energy_gain += wtw_intake * self.model.FractionTakenUp * self.model.RatioAFDWtoWet \
+                    #                     * self.model.AFDWenergyContent
+                    self.energy_gain += energy_intake
 
-                # intake rate becomes zero at low temperatures
-                if self.model.temperature < 0:
-                    wtw_intake, energy_intake = [0, 0]
-                else:
-                    wtw_intake, energy_intake = self.consume_grassland_diet()
+                # intake rate grasslands
+                elif self.model.patch_types[self.pos] == "Grassland":
 
-                # update stomach content (add wet weight)
-                self.stomach_content += wtw_intake
+                    # intake rate becomes zero at low temperatures
+                    if self.model.temperature < 0:
+                        wtw_intake, energy_intake = [0, 0]
+                    else:
+                        wtw_intake, energy_intake = self.consume_grassland_diet()
 
-                # update energy gain
-                self.energy_gain += energy_intake
+                    # update stomach content (add wet weight)
+                    self.stomach_content += wtw_intake
 
+                    # update energy gain
+                    self.energy_gain += energy_intake
+
+            # # if energy goal not reached and patch not available and specialty = worm, keep foraging on grass
+            # elif self.specialist == 'worm':
+            #
+            #     # intake rate becomes zero at low temperatures #todo: dit is dubbel, functie van maken
+            #     if self.model.temperature < 0:
+            #         wtw_intake, energy_intake = [0, 0]
+            #     else:
+            #         wtw_intake, energy_intake = self.consume_grassland_diet()
+            #
+            #     # update stomach content (add wet weight)
+            #     self.stomach_content += wtw_intake
+            #
+            #     # update energy gain
+            #     self.energy_gain += energy_intake
         # digestion
         self.stomach_content -= min(self.max_digestive_rate, self.stomach_content) # todo: worms zitten hier niet in
 
-        # at the end of the tidal cycle update weight todo: hier moet de temperatuur op een juiste manier in.
-        if self.model.time_in_cycle == self.model.total_number_steps_in_cycle - 1: # check if this is correct
+        # at the end of the tidal cycle
+        if self.model.time_in_cycle == self.model.total_number_steps_in_cycle - 1:
+
+            # collect foraging time data
+            self.foraging_time_per_cycle.append(self.time_foraged)
 
             # energy consumption
             energy_consumed = self.energy_requirements_one_time_step(self.model.temperature) \
-                              * self.model.total_number_steps_in_cycle # todo: dit hangt dus van tidal cycle af
+                              * self.model.total_number_steps_in_cycle
 
             # update weight
             energy_difference = self.energy_gain - energy_consumed
@@ -134,9 +152,10 @@ class Bird:
             elif energy_difference > 0:
                 self.weight += energy_difference / self.BodyGramEnergyReq
 
-            # apply death if weight becomes too low todo: ook per tidal cycle
-            if self.weight < self.minimum_weight: #todo: this should be something else maybe?
+            # apply death if weight becomes too low
+            if self.weight < self.minimum_weight:
                 self.model.schedule.remove(self)
+
 
 
     def capture_rate_mussel(self, prey_dry_weight, density_competitors, local_dominance):
@@ -162,6 +181,7 @@ class Bird:
 
         # calculate capture rate and include interference
         capture_rate = self.functional_response_mussel(attack_rate, self.model.mussel_density, prey_dry_weight, max_intake_rate)
+
         final_capture_rate = capture_rate * interference
         return final_capture_rate
 
@@ -283,7 +303,7 @@ class Bird:
 
         # determine energy for weight gain/loss
         weight_difference = self.model.reference_weight_birds - self.weight
-
+        print(self.model.reference_weight_birds, self.model.schedule.time)
         # check if bird should eat more/less for weight gain/loss
         if weight_difference < 0:
             weight_energy_requirement = self.BodyGramEnergyCont * weight_difference
@@ -421,12 +441,14 @@ class Bird:
         else:
             self.time_foraged += 1
 
-        # # deplete prey todo
-        # self.model.prey[self.pos]["kok1"] -= final_captured_kok1 / self.model.patch_areas[self.pos]
-        # self.model.prey[self.pos]["kok2"] -= final_captured_kok2 / self.model.patch_areas[self.pos]
-        # self.model.prey[self.pos]["kokmj"] -= final_captured_kokmj / self.model.patch_areas[self.pos]
-        # self.model.prey[self.pos]["mac"] -= final_captured_mac / self.model.patch_areas[self.pos]
-
+        # deplete prey (use actual area of patch)
+        print(self.model.cockle_densities[self.pos], "density before depletion")
+        print(final_captured_kok1, final_captured_kok2, final_captured_kokmj, "captured")
+        self.model.cockle_densities[self.pos][0] -= final_captured_kok1 / self.model.patch_areas[self.pos]
+        self.model.cockle_densities[self.pos][1] -= final_captured_kok2 / self.model.patch_areas[self.pos]
+        self.model.cockle_densities[self.pos][2] -= final_captured_kokmj / self.model.patch_areas[self.pos]
+        self.model.macoma_density[self.pos] -= final_captured_mac / self.model.patch_areas[self.pos]
+        print(self.model.cockle_densities[self.pos], "density after depletion\n")
         return intake_wtw, energy_intake
 
     def combined_capture_rate_cockle_macoma(self):
@@ -473,7 +495,8 @@ class Bird:
                             + capture_rate_mac_den
 
         # for cockles, calculate uptake reduction
-        bird_density = (self.model.num_agents_on_patches[self.pos] - 1) / self.model.patch_areas[self.pos]
+        bird_density = (self.model.num_agents_on_patches[self.pos] - 1) / self.model.available_areas[
+                    self.pos]
 
         # parameters
         attack_distance = 2.0  # webtics, stillman 2002
