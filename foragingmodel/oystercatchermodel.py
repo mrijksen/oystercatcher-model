@@ -31,7 +31,6 @@ class OystercatcherModel(Model):
         # get data files
         self.patch_data = df_patch_data
         self.df_env = df_env
-
         self.df_patch_availability = df_patch_availability
 
         # set parameters #todo: zet sommige dingen in param file
@@ -162,9 +161,7 @@ class OystercatcherModel(Model):
             self.temperature = self.temperature_data[time_step]
             self.proportion_macoma = self.proportion_macoma_data[time_step]
 
-            # calculate wet weight mussels with self.mussel_wtw_gain # todo: dit moet per patch
-
-            # calculate new fresh weight cockles with extrapolation
+            # calculate new fresh weight cockles
 
             # calculate wet weight cockles (g)
 
@@ -172,17 +169,9 @@ class OystercatcherModel(Model):
             self.cockle_sizes = self.CockFWtoSizeA * (self.cockle_fresh_weight ** self.CockFWtoSizeB)
             self.handling_time_cockles = self.calculate_handling_time_cockles(self.cockle_sizes)
 
-            # # calculate handling time cockles todo: voor alle patches
-            # self.handling_time_cockles = []
-            # for size in self.cockle_sizes:
-            #     self.handling_time_cockles.append(self.calculate_handling_time_cockles(size))
-
-
 
             # todo: misschien als we geen interferentie meenemen hier de intake rate voor mudflats berekenen?
-            # todo: sowieso voor elke patch de non-interference IR berekenen?
-
-
+            # todo: sowieso voor elke patch de non-interference IR berekenen (in plaats van in agents)
 
         # execute model.step (move agents and let them eat) todo: pas schedule aan
         self.schedule.step()

@@ -1,5 +1,5 @@
 import numpy as np
-import time
+
 
 class Bird:
     """
@@ -17,7 +17,7 @@ class Bird:
         self.pos = pos
         # self.specialist = 'shellfish'
         self.start_foraging = None # number of steps after high tide
-        self.time_foraged = 6 #todo: welke initialisatie waarde ?
+        self.time_foraged = 6 #todo: welke initialisatie waarde ? let op tijdstap
 
         # stomach, weight, energy goal
         self.stomach_content = 0 # g todo: waarmee initialiseren?
@@ -40,10 +40,8 @@ class Bird:
         self.foraging_time_per_cycle = []
         self.start_foraging_list = []
 
-    def step(self): # todo: agent blijft foerageren als patch niet available is
+    def step(self):
         """A model step. Move, then eat. """
-        # print("Agent id:", self.unique_id, "pos:", self.pos, "weight:", self.weight)
-        # print(self.model.patch_types[self.pos])
 
         # determine energy goal at start of new tidal cycle and set gain to zero
         if self.model.new_tidal_cycle:
@@ -58,20 +56,19 @@ class Bird:
             self.energy_gain = 0
 
             # calculate when to start foraging
-            # print(self.model.df_env.iloc[self.model.schedule.time])
-            self.start_foraging = 0
-            # self.start_foraging = int(self.model.steps_to_low_tide - (self.time_foraged / 2))
-            # self.start_foraging_list.append(self.start_foraging)
+            # self.start_foraging = 0
+            self.start_foraging = int(self.model.steps_to_low_tide - (self.time_foraged / 2))
+
             # keep track of time foraged within coming cycle
             self.time_foraged = 0
 
         # foraging
-        if self.model.time_in_cycle >= self.start_foraging and self.energy_gain < self.energy_goal: #todo: move if patch not available
+        if self.model.time_in_cycle >= self.start_foraging and self.energy_gain < self.energy_goal:
 
             # only forage if patch is available
             if self.model.available_areas[self.pos] > 0:
 
-                # intake rate mussel bed todo: check foraging conditions (is patch available, day & night?)
+                # intake rate mussel bed
                 if self.model.patch_types[self.pos] == "Bed":
 
                     # num of other agents and calculate local dominance
@@ -98,9 +95,7 @@ class Bird:
                     # update stomach content (add wet weight)
                     self.stomach_content += wtw_intake
 
-                    # update energy gain (everything that is eaten)
-                    # self.energy_gain += wtw_intake * self.model.FractionTakenUp * self.model.RatioAFDWtoWet \
-                    #                     * self.model.AFDWenergyContent
+                    # update energy gain
                     self.energy_gain += energy_intake
 
                 # intake rate grasslands
@@ -118,28 +113,18 @@ class Bird:
                     # update energy gain
                     self.energy_gain += energy_intake
 
-            # # if energy goal not reached and patch not available and specialty = worm, keep foraging on grass
-            # elif self.specialist == 'worm':
-            #
-            #     # intake rate becomes zero at low temperatures #todo: dit is dubbel, functie van maken
-            #     if self.model.temperature < 0:
-            #         wtw_intake, energy_intake = [0, 0]
-            #     else:
-            #         wtw_intake, energy_intake = self.consume_grassland_diet()
-            #
-            #     # update stomach content (add wet weight)
-            #     self.stomach_content += wtw_intake
-            #
-            #     # update energy gain
-            #     self.energy_gain += energy_intake
         # digestion
-        self.stomach_content -= min(self.max_digestive_rate, self.stomach_content) # todo: worms zitten hier niet in
+        self.stomach_content -= min(self.max_digestive_rate, self.stomach_content)
 
         # at the end of the tidal cycle
         if self.model.time_in_cycle == self.model.total_number_steps_in_cycle - 1:
 
             # collect foraging time data
             self.foraging_time_per_cycle.append(self.time_foraged)
+
+            # if energy goal not reached, start foraging immediately in next cycle
+            if self.energy_gain < self.energy_goal:
+                self.time_foraged = 1000 # todo: not neat to like this maybe?
 
             # energy consumption
             energy_consumed = self.energy_requirements_one_time_step(self.model.temperature) \
@@ -185,7 +170,7 @@ class Bird:
         final_capture_rate = capture_rate * interference
         return final_capture_rate
 
-    @staticmethod
+    @staticmethod # todo: dit capture rate noemen? en dit is hetzelfde voor alle patches en moet global
     def functional_response_mussel(attack_rate, mussel_density, prey_weight, max_intake_rate):
         """
         Functional response as described in WEBTICS. They converted
@@ -293,7 +278,7 @@ class Bird:
         # return final energy requirement
         return max(E_t, E_m)
 
-    def energy_goal_coming_cycle(self, mean_T, num_steps_tidal_cycle): #todo: over 1 or 2 tidal cycles? 2 lijkt logisch, en handig als je dag en  nacht meeneemt
+    def energy_goal_coming_cycle(self, mean_T, num_steps_tidal_cycle):
         """
         Method that calculates the energy goal of a bird for the coming tidal cycle.
 
@@ -303,7 +288,7 @@ class Bird:
 
         # determine energy for weight gain/loss
         weight_difference = self.model.reference_weight_birds - self.weight
-        print(self.model.reference_weight_birds, self.model.schedule.time)
+
         # check if bird should eat more/less for weight gain/loss
         if weight_difference < 0:
             weight_energy_requirement = self.BodyGramEnergyCont * weight_difference
@@ -314,7 +299,7 @@ class Bird:
         energy_goal = weight_energy_requirement # todo: unnessesary variable just for clarity
 
         # calculate normal energy requirements
-        energy_goal += self.energy_requirements_one_time_step(mean_T) * num_steps_tidal_cycle # todo: deze temperatuur moet aangepast
+        energy_goal += self.energy_requirements_one_time_step(mean_T) * num_steps_tidal_cycle
         return energy_goal
 
     def consume_mussel_diet(self, density_of_competitors, local_dominance):
@@ -325,13 +310,10 @@ class Bird:
 
         Returns the wet weight consumed (g).
         """
-        #todo: ze doen nu hele tijdstap hetzelfde, moeten iets toevoegen zodat ze deel van tijdstap kunnen forageren
-        # check if energy goal is met
 
-        # capture and intake rate including interference todo: voeg andere IRs toe afhankelijk van dieet
+        # capture and intake rate including interference
         patch_capture_rate = self.capture_rate_mussel(self.model.mussel_afdw, density_of_competitors,
                                                      local_dominance) # todo: kies tussen self. of staticfunction
-                                                        # todo: verander input, niet nodig om density of prey te geven
 
         # wet intake rate
         patch_wet_intake = patch_capture_rate * self.model.mussel_wet_weight # g WtW/s
@@ -354,8 +336,7 @@ class Bird:
         # # calculate number prey captured
         # num_prey_captured = intake_wtw / self.model.init_mussel_wet_weight
 
-        # check if energy gain does not exceed goal, if so, adapt intake #todo: VOER DIT DOOR NAAR FOERAGEERTIJD
-        # TODO dit ff in functie?
+        # check if energy gain does not exceed goal, if so, adapt intake #todo: functie van maken?
         if self.energy_gain + energy_intake > self.energy_goal:
 
             # calculate surplus
@@ -386,7 +367,7 @@ class Bird:
         capture_rate_kok1, capture_rate_kok2, capture_rate_kokmj, capture_rate_mac \
             = self.combined_capture_rate_cockle_macoma()
 
-        # wet weight intake rate (g/s) #todo: wtw hangt van patch af
+        # wet weight intake rate (g/s)
         patch_wet_intake = capture_rate_kok1 * self.model.cockle_wet_weight[self.pos][0] \
                              + capture_rate_kok2 * self.model.cockle_wet_weight[self.pos][1]\
                              + capture_rate_kokmj * self.model.cockle_wet_weight[self.pos][2]\
@@ -419,8 +400,7 @@ class Bird:
         energy_intake = intake_wtw * self.model.FractionTakenUp * self.model.RatioAFDWtoWet \
                                     * self.model.AFDWenergyContent
 
-        # check if energy gain does not exceed goal, if so, adapt intake #todo: VOER DIT DOOR NAAR FOERAGEERTIJD
-        # TODO dit ff in functie?
+        # check if energy gain does not exceed goal, if so, adapt intake #todo: in functie?
         if self.energy_gain + energy_intake > self.energy_goal:
             # calculate surplus
             surplus = self.energy_gain + energy_intake - self.energy_goal
@@ -442,13 +422,10 @@ class Bird:
             self.time_foraged += 1
 
         # deplete prey (use actual area of patch)
-        print(self.model.cockle_densities[self.pos], "density before depletion")
-        print(final_captured_kok1, final_captured_kok2, final_captured_kokmj, "captured")
         self.model.cockle_densities[self.pos][0] -= final_captured_kok1 / self.model.patch_areas[self.pos]
         self.model.cockle_densities[self.pos][1] -= final_captured_kok2 / self.model.patch_areas[self.pos]
         self.model.cockle_densities[self.pos][2] -= final_captured_kokmj / self.model.patch_areas[self.pos]
         self.model.macoma_density[self.pos] -= final_captured_mac / self.model.patch_areas[self.pos]
-        print(self.model.cockle_densities[self.pos], "density after depletion\n")
         return intake_wtw, energy_intake
 
     def combined_capture_rate_cockle_macoma(self):
@@ -460,9 +437,6 @@ class Bird:
         """
 
         # get density and size of all cockle size classes on patch
-        # kok1_density = self.model.prey[self.pos]["kok1"]
-        # kok2_density = self.model.prey[self.pos]["kok2"]
-        # kokmj_density = self.model.prey[self.pos]["kokmj"]
         kok1_handling_time = self.model.handling_time_cockles[self.pos][0] # todo: one liner van maken
         kok2_handling_time = self.model.handling_time_cockles[self.pos][1]
         kokmj_handling_time = self.model.handling_time_cockles[self.pos][2]
@@ -494,7 +468,8 @@ class Bird:
         final_denominator = 1 + capture_rate_kok1_den + capture_rate_kok2_den + capture_rate_kokmj_den \
                             + capture_rate_mac_den
 
-        # for cockles, calculate uptake reduction
+        ##############
+        # for cockles, calculate uptake reduction todo: dit moet binnen agent, rest van capture rate global maken
         bird_density = (self.model.num_agents_on_patches[self.pos] - 1) / self.model.available_areas[
                     self.pos]
 
@@ -508,6 +483,7 @@ class Bird:
         capture_rate_kok2 = (capture_rate_kok2_num / final_denominator) * relative_intake
         capture_rate_kokmj = (capture_rate_kokmj_num / final_denominator) * relative_intake
         capture_rate_mac = capture_rate_mac_num / final_denominator
+        #################
         return capture_rate_kok1, capture_rate_kok2, capture_rate_kokmj, capture_rate_mac
 
     def calculate_possible_intake(self):
@@ -522,7 +498,7 @@ class Bird:
         possible_wtw_intake = self.max_digestive_rate + stomach_left  # g / 10 minutes
         return possible_wtw_intake
 
-    def consume_grassland_diet(self): #todo: should be temperature dependent
+    def consume_grassland_diet(self):
         """ Method that lets agent forage on grassland patch. Based on the energy goal and the stomach content
         the intake of an agent is evaluated.
 
@@ -549,8 +525,7 @@ class Bird:
         # calculate energy intake, multiply with fraction of possible intake divided by max intake
         energy_intake = (afdw_intake_grassland * self.model.AFDWenergyContent) * final_intake_wtw / wtw_intake # kJ
 
-        # check if energy gain does not exceed goal, if so, adapt intake #todo: VOER DIT DOOR NAAR FOERAGEERTIJD
-        # TODO dit ff in functie?
+        # check if energy gain does not exceed goal, if so, adapt intake #todo: dit in functie?
         if self.energy_gain + energy_intake > self.energy_goal:
             # calculate surplus
             surplus = self.energy_gain + energy_intake - self.energy_goal
