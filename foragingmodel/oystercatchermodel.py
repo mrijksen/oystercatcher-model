@@ -82,6 +82,7 @@ class OystercatcherModel(Model):
         self.mussel_wtw_gain = -0.0025 / (24 / (self.resolution_min / 60))  # wtw gain per time step, GossCustard2001
         self.mussel_afdw = 0.850  # g AFDW GossCustard2001 # todo: dit moet veranderen
         self.mussel_wet_weight = self.mussel_afdw / self.RatioAFDWtoWet  # g WtW calculated with conversion factor
+        # self.mussel_intake_rates =
 
         # array with number of agents on every patch
         self.num_agents_on_patches = np.zeros(self.num_patches, dtype=int) #todo: misschien overbodig?
@@ -118,12 +119,14 @@ class OystercatcherModel(Model):
         self.cockle_sizes = None
         self.handling_time_cockles = None
 
+        self.mussel_potential_wtw_intake, self.mussel_potentional_energy_intake = [None, None]
+
         # create birds
         for i in range(self.init_birds):
 
             # give random initial position #todo: should be according to ideal distribution
             # pos = random.randrange(self.num_patches + 1)
-            pos = 1
+            pos = 0
 
             # give agent individual properties
             unique_id = self.next_id() # every agent has unique id
@@ -166,6 +169,8 @@ class OystercatcherModel(Model):
 
             # calculate wet weight cockles (g)
 
+            # calculate new mussel weight
+
             # calculate new size cockles (mm) with formula that relates fresh weight to length and handling time
             self.cockle_sizes = self.CockFWtoSizeA * (self.cockle_fresh_weight ** self.CockFWtoSizeB)
             self.handling_time_cockles = self.calculate_handling_time_cockles(self.cockle_sizes)
@@ -175,7 +180,7 @@ class OystercatcherModel(Model):
             # todo: sowieso voor elke patch de non-interference IR berekenen (in plaats van in agents)
 
         # calculate intake rate for mussel patches (without interference)
-
+        self.mussel_potential_wtw_intake, self.mussel_potentional_energy_intake = self.mussel_potential_intake()
 
         # calculate intake rate for mudflats (without interference)
 
@@ -225,26 +230,49 @@ class OystercatcherModel(Model):
         hiddinkB = 0.000213     # handling parameter (Hiddink2003)
         return (hiddinkB / hiddinkA) * (1000 * self.macoma_wet_weight * self.RatioAFDWtoWet)
 
+    def mussel_potential_intake(self):  #todo: in agent zelf opnieuw E intake berekenen op basis v beschikbare maaginhoud
+        """
+        Calculates final potential intake on mussel patches (interference thus excluded) for one time step.
 
-    # @staticmethod
-    # def get_steps(num_tidal_cycles, minutes_in_tidal_cycle, resolution_min): #todo: dit doen we dubbel (ook in data.py)
-    #     """Helper method to calculate number of steps based on number of tidal cycles
-    #     and resolution of model.
-    #
-    #     Note that this can be changed to something more realistic (e.g, varying tidal cycles)
-    #     """
-    #     return int((num_tidal_cycles * minutes_in_tidal_cycle) / resolution_min)
+        :return: potential wtw intake (g) and energy intake (kJ)
+        """
 
-    # @staticmethod #todo: this should be L on current patch, not in total system! should we put this in agents.py?
-    # def calculate_L(total_num_agents, dominance):
-    #     """ Returns total number of encounters won (in percentages) based on number
-    #     of agents currently in system and an agent's dominance"""
-    #     if total_num_agents > 1:
-    #         return (total_num_agents - dominance) * 100 / (total_num_agents - 1)
-    #     else:
-    #         return 100 #todo: should this be 100?
+        # calculate capture rate and include interference
+        capture_rate = self.functional_response_mussel(self.mussel_density, self.mussel_afdw)
 
-    # # tidal cycle parameters and total number of model steps
-    # self.num_tidal_cycles = params["num_tidal_cycles"]
+        # wet intake rate
+        intake_wtw = capture_rate * self.mussel_wet_weight  # g WtW/s
+        intake_wtw *= (1 - self.LeftOverShellfish)
 
-    # self.minutes_in_tidal_cycle = params["minutes_in_tidal_cycle"] # minutes in tidal cycle, 720 = 12 hours
+        # get total capture rate/IRs in one time step todo: dit kan iets netter
+        conversion_s_to_timestep = self.resolution_min * 60
+        total_intake_wtw = intake_wtw * conversion_s_to_timestep  # g/time step
+
+        # calculate potential energy intake
+        energy_intake = total_intake_wtw * self.FractionTakenUp * self.RatioAFDWtoWet \
+                        * self.AFDWenergyContent
+        return total_intake_wtw, energy_intake
+
+    @staticmethod
+    def functional_response_mussel(mussel_density, mussel_afdw):
+        """
+        Functional response as described in WEBTICS. They converted
+        the intake of stillman to a capture rate.
+
+        :param prey_weight: ash free dry mass weight of mussels (no size classes) in g
+        :return: capture rate in # prey/ s
+        """
+
+        # parameters todo: in parameter file
+        attack_rate = 0.00057  # mosselA in webtics
+        mussel_intake_rate_A = 0.092  # parameters for max intake rate (plateau)
+        mussel_intake_rate_B = 0.506
+
+        # calculate plateau of functional response mussel #todo: is de IR niet gewoon dit plateau?
+        max_intake_rate = mussel_intake_rate_A * (mussel_afdw * 1000) ** mussel_intake_rate_B
+
+        # calculate handling time and capture rate
+        handling_time = (mussel_afdw * 1000) / max_intake_rate  # convert prey to mg
+        capture_rate = (attack_rate * mussel_density) / (1 + attack_rate * handling_time * mussel_density)
+        return capture_rate
+

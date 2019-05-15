@@ -82,16 +82,15 @@ class Bird:
                 # intake rate mussel bed
                 if self.model.patch_types[self.pos] == "Bed":
 
-                    # num of other agents and calculate local dominance
-                    num_agents_on_patch, local_dominance = self.calculate_local_dominance(
-                        self.model)
-                    # local_dominance = 100/4
+                    # num of other agents and calculate local dominance todo: dit moet op andere manier berekent
+                    # num_agents_on_patch, local_dominance = self.calculate_local_dominance(
+                    #     self.model)
+                    local_dominance = 100/4
 
                     # calculate competitor density
                     num_agents_on_patch = self.model.num_agents_on_patches[self.pos]
                     density_of_competitors = (num_agents_on_patch - 1)/ self.model.available_areas[
                         self.pos]
-                    # print(density_of_competitors)
 
                     # calculate intake
                     wtw_intake, energy_intake = self.consume_mussel_diet(density_of_competitors, local_dominance)
@@ -154,68 +153,6 @@ class Bird:
             # apply death if weight becomes too low
             if self.weight < self.minimum_weight:
                 self.model.schedule.remove(self)
-
-
-
-    def capture_rate_mussel(self, prey_dry_weight, density_competitors, local_dominance):
-        """Calculate capture rate for mussel patch on Wadden Sea.
-
-        Functional response is derived from WEBTICS.
-
-        Interference is derived from Stillman et al. (2000).
-
-        Weight of prey should be given in g.
-
-        Final capture rate is in #/s.
-        """
-
-        # todo maak hier met functional response 1 functie van
-
-        # parameters
-        attack_rate = 0.00057 # mosselA in stillman
-        max_intake_rate = self.maximal_intake_rate(prey_dry_weight) #todo haal dry weight weg
-
-        # interference intake reduction
-        interference = self.interference_stillman(density_competitors, local_dominance)
-
-        # calculate capture rate and include interference
-        capture_rate = self.functional_response_mussel(attack_rate, self.model.mussel_density, prey_dry_weight, max_intake_rate)
-
-        final_capture_rate = capture_rate * interference
-        return final_capture_rate
-
-    @staticmethod # todo: dit capture rate noemen? en dit is hetzelfde voor alle patches en moet global
-    def functional_response_mussel(attack_rate, mussel_density, prey_weight, max_intake_rate):
-        """
-        Functional response as described in WEBTICS. They converted
-        the intake of stillman to a capture rate.
-
-        :param attack_rate:
-        :param max_intake_rate:
-        :param prey_weight: average dry mass weight of mussels (no size classes) in g
-        :return: capture rate in # prey/ s
-        """
-
-        # calculate handling time and capture rate
-        handling_time = (prey_weight * 1000) / max_intake_rate # convert prey to mg
-        capture_rate = (attack_rate * mussel_density) / (1 + attack_rate * handling_time * mussel_density)
-        return capture_rate
-
-    @staticmethod #todo call this maximal_mussel_intake
-    def maximal_intake_rate(prey_weight):
-        """Calculate maximal intake rate as described in WEBTICS (page 62)
-
-        :prey_weight in g
-        :return max intake rate in mg/s
-        """
-
-        # parameters todo: in parameter file
-        mussel_intake_rate_A = 0.092  # parameters for max intake rate (plateau)
-        mussel_intake_rate_B = 0.506
-
-        # calculate plateau/max intake rate
-        max_intake_rate = mussel_intake_rate_A * (prey_weight * 1000) ** mussel_intake_rate_B
-        return max_intake_rate
 
     @staticmethod #todo: moet dit in staticfunction?
     def interference_stillman(density_competitors, local_dominance):
@@ -316,6 +253,7 @@ class Bird:
         energy_goal += self.energy_requirements_one_time_step(mean_T) * num_steps_tidal_cycle
         return energy_goal
 
+
     def consume_mussel_diet(self, density_of_competitors, local_dominance):
         """ Method that lets agent forage on mussel patch. Based on the energy goal and the stomach content
         the intake of an agent is evaluated.
@@ -325,30 +263,21 @@ class Bird:
         Returns the wet weight consumed (g).
         """
 
-        # capture and intake rate including interference
-        patch_capture_rate = self.capture_rate_mussel(self.model.mussel_afdw, density_of_competitors,
-                                                     local_dominance) # todo: kies tussen self. of staticfunction
+        # interference intake reduction
+        relative_uptake = self.interference_stillman(density_of_competitors, local_dominance)
 
-        # wet intake rate
-        patch_wet_intake = patch_capture_rate * self.model.mussel_wet_weight # g WtW/s
-        patch_wet_intake *= (1 - self.model.LeftOverShellfish)
-
-        # get total capture rate/IRs in one time step
-        # todo: kan dit buiten functie? dan gebruiken we het voor alle patch types
-        conversion_s_to_timestep = self.model.resolution_min * 60
-        total_patch_intake_wet_weight = patch_wet_intake * conversion_s_to_timestep # g/time step
+        # wet intake rate (potential intake rate including interference)
+        wtw_intake = self.model.mussel_potential_wtw_intake * relative_uptake
 
         # calculate possible intake based on stomach left and digestive rate
         possible_wtw_intake = self.calculate_possible_intake() # g / 10 minutes
 
         # intake is minimum of possible intake and intake achievable on patch
-        intake_wtw = min(total_patch_intake_wet_weight, possible_wtw_intake)  # WtW intake in g
+        intake_wtw = min(wtw_intake, possible_wtw_intake)  # WtW intake in g
 
-        # calculate energy intake
-        energy_intake = intake_wtw * self.model.FractionTakenUp * self.model.RatioAFDWtoWet * self.model.AFDWenergyContent
-
-        # # calculate number prey captured
-        # num_prey_captured = intake_wtw / self.model.init_mussel_wet_weight
+        # calculate actual energy intake
+        energy_intake = intake_wtw * self.model.FractionTakenUp * self.model.RatioAFDWtoWet \
+                        * self.model.AFDWenergyContent
 
         # check if energy gain does not exceed goal, if so, adapt intake #todo: functie van maken?
         if self.energy_gain + energy_intake > self.energy_goal:
@@ -567,7 +496,115 @@ class Bird:
         uptake_reduction = np.exp(exponent)
         return uptake_reduction
 
+    # def consume_mussel_diet(self, density_of_competitors, local_dominance):
+    #     """ Method that lets agent forage on mussel patch. Based on the energy goal and the stomach content
+    #     the intake of an agent is evaluated.
+    #
+    #     The patch depletion is also implemented.
+    #
+    #     Returns the wet weight consumed (g).
+    #     """
+    #
+    #     # capture and intake rate including interference
+    #     patch_capture_rate = self.capture_rate_mussel(self.model.mussel_afdw, density_of_competitors,
+    #                                                  local_dominance) # todo: kies tussen self. of staticfunction
+    #
+    #     # wet intake rate
+    #     patch_wet_intake = patch_capture_rate * self.model.mussel_wet_weight # g WtW/s
+    #     patch_wet_intake *= (1 - self.model.LeftOverShellfish)
+    #
+    #     # get total capture rate/IRs in one time step
+    #     # todo: kan dit buiten functie? dan gebruiken we het voor alle patch types
+    #     conversion_s_to_timestep = self.model.resolution_min * 60
+    #     total_patch_intake_wet_weight = patch_wet_intake * conversion_s_to_timestep # g/time step
+    #
+    #     # calculate possible intake based on stomach left and digestive rate
+    #     possible_wtw_intake = self.calculate_possible_intake() # g / 10 minutes
+    #
+    #     # intake is minimum of possible intake and intake achievable on patch
+    #     intake_wtw = min(total_patch_intake_wet_weight, possible_wtw_intake)  # WtW intake in g
+    #
+    #     # calculate energy intake
+    #     energy_intake = intake_wtw * self.model.FractionTakenUp * self.model.RatioAFDWtoWet * self.model.AFDWenergyContent
+    #
+    #     # check if energy gain does not exceed goal, if so, adapt intake #todo: functie van maken?
+    #     if self.energy_gain + energy_intake > self.energy_goal:
+    #
+    #         # calculate surplus
+    #         surplus = self.energy_gain + energy_intake - self.energy_goal
+    #
+    #         # fraction of this time step needed to accomplish goal
+    #         fraction_needed = 1 - (surplus / energy_intake)
+    #
+    #         # multiply all intakes with fraction needed
+    #         intake_wtw *= fraction_needed
+    #         energy_intake *= fraction_needed
+    #
+    #         # update foraging time
+    #         self.time_foraged += fraction_needed
+    #     else:
+    #         self.time_foraged += 1
+    #     return intake_wtw, energy_intake
 
+    # def capture_rate_mussel(self, prey_dry_weight, density_competitors, local_dominance):
+    #     """Calculate capture rate for mussel patch on Wadden Sea.
+    #
+    #     Functional response is derived from WEBTICS.
+    #
+    #     Interference is derived from Stillman et al. (2000).
+    #
+    #     Weight of prey should be given in g.
+    #
+    #     Final capture rate is in #/s.
+    #     """
+    #
+    #     # todo maak hier met functional response 1 functie van
+    #
+    #     # parameters
+    #     attack_rate = 0.00057 # mosselA in stillman
+    #     max_intake_rate = self.maximal_intake_rate(prey_dry_weight) #todo haal dry weight weg
+    #
+    #     # interference intake reduction
+    #     interference = self.interference_stillman(density_competitors, local_dominance)
+    #
+    #     # calculate capture rate and include interference
+    #     capture_rate = self.functional_response_mussel(attack_rate, self.model.mussel_density, prey_dry_weight, max_intake_rate)
+    #
+    #     final_capture_rate = capture_rate * interference
+    #     return final_capture_rate
+
+    # @staticmethod # todo: dit capture rate noemen? en dit is hetzelfde voor alle patches en moet global
+    # def functional_response_mussel(attack_rate, mussel_density, prey_weight, max_intake_rate):
+    #     """
+    #     Functional response as described in WEBTICS. They converted
+    #     the intake of stillman to a capture rate.
+    #
+    #     :param attack_rate:
+    #     :param max_intake_rate:
+    #     :param prey_weight: average dry mass weight of mussels (no size classes) in g
+    #     :return: capture rate in # prey/ s
+    #     """
+    #
+    #     # calculate handling time and capture rate
+    #     handling_time = (prey_weight * 1000) / max_intake_rate # convert prey to mg
+    #     capture_rate = (attack_rate * mussel_density) / (1 + attack_rate * handling_time * mussel_density)
+    #     return capture_rate
+
+    # @staticmethod #todo call this maximal_mussel_intake
+    # def maximal_intake_rate(prey_weight):
+    #     """Calculate maximal intake rate as described in WEBTICS (page 62)
+    #
+    #     :prey_weight in g
+    #     :return max intake rate in mg/s
+    #     """
+    #
+    #     # parameters todo: in parameter file
+    #     mussel_intake_rate_A = 0.092  # parameters for max intake rate (plateau)
+    #     mussel_intake_rate_B = 0.506
+    #
+    #     # calculate plateau/max intake rate
+    #     max_intake_rate = mussel_intake_rate_A * (prey_weight * 1000) ** mussel_intake_rate_B
+    #     return max_intake_rate
 
 
 

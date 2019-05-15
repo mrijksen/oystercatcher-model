@@ -125,7 +125,7 @@ def get_patch_data(start_year): #todo: add grass & roost patch
     df_patches = df_patches[(df_patches[columns].T != 0).any()]
 
     # sort on patch id and reset index
-    df_patches = df_patches.sort_values('patchID')
+    df_patches = df_patches.sort_values('type')
     df_patches.reset_index(inplace=True, drop=True)
     return df_patches
 
@@ -151,7 +151,7 @@ def get_artificial_patch_data():
     artificial_patches['Macoma_dens'] = [0, 10, np.nan]
 
     # sort and set index to patchID
-    df_patches = artificial_patches.sort_values('patchID')
+    df_patches = artificial_patches.sort_values('type')
     df_patches.index = df_patches.patchID
     return df_patches
 
