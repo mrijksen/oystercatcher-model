@@ -3,6 +3,7 @@ from oystercatchermodel import OystercatcherModel
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import time
 
 
 
@@ -63,14 +64,13 @@ if __name__ == "__main__":
 
         # initiate and run model
         model = initiate_model(start_year)
-    model.run_model()
 
-    # # load environmental data todo: dit kan later weg
-    # # location of environmental data todo: dit ook in data.py zetten? en alleen startjaar meegevem?
-    # env_data_dir = 'C:/Users/Marleen/Documents/thesis project/oystercatcher-model/Input data/'
-    # env_data_filename = '{}_9_1_to_{}_3_1.pkl'.format(start_year, start_year + 1)
-    # env_data_path = env_data_dir + env_data_filename
-    # df_env = pd.read_pickle(env_data_path)
+    start_time = time.time()
+    model.run_model()
+    end_time = time.time()
+    print(end_time - start_time, "TIME")
+    print(len(model.schedule.agents), "number of agents left")
+
 
     df_high_water = model.df_env[model.df_env.extreem == 'HW']
     df_high_water.reset_index(inplace=True)
@@ -110,6 +110,6 @@ if __name__ == "__main__":
     fig.subplots_adjust(top=0.88)
     plt.savefig('test')
 
-    print(np.mean(model.schedule.agents[0].foraging_time_per_cycle[1:]))
+    # print(np.mean(model.schedule.agents[0].foraging_time_per_cycle[1:]))
 
     plt.show()

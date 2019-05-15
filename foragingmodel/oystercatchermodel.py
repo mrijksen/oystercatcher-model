@@ -33,7 +33,7 @@ class OystercatcherModel(Model):
         self.df_env = df_env
         self.df_patch_availability = df_patch_availability
 
-        # set parameters #todo: zet sommige dingen in param file
+        # set parameters #todo: zet in param file
         self.init_birds = params["init_birds"]
         self.resolution_min = 30 # time step size # todo: calculate with input data
 
@@ -44,6 +44,9 @@ class OystercatcherModel(Model):
         self.LeftOverShellfish = 0.1 # ZwartEnsKerstenetal1996
         self.CockFWtoSizeA = 14.610 # Ens, Webtics, L = a FW ^ b(mm = a gram ^b)
         self.CockFWtoSizeB = 0.317766
+
+        # threshold to leave patch
+        self.leaving_threshold = 20.45685 # IR at which 623g bird with mean efficientie needs 12 hours of foraging J/s
 
         # calculate number of time steps in total
         self.num_steps = df_env.shape[0]
@@ -112,8 +115,6 @@ class OystercatcherModel(Model):
         self.proportion_macoma = None
         self.reference_weight_birds = None
         self.new_tidal_cycle = None # boolean to check if new cycle starts
-
-        #
         self.cockle_sizes = None
         self.handling_time_cockles = None
 
@@ -122,7 +123,7 @@ class OystercatcherModel(Model):
 
             # give random initial position #todo: should be according to ideal distribution
             # pos = random.randrange(self.num_patches + 1)
-            pos = 0
+            pos = 1
 
             # give agent individual properties
             unique_id = self.next_id() # every agent has unique id
@@ -172,6 +173,12 @@ class OystercatcherModel(Model):
 
             # todo: misschien als we geen interferentie meenemen hier de intake rate voor mudflats berekenen?
             # todo: sowieso voor elke patch de non-interference IR berekenen (in plaats van in agents)
+
+        # calculate intake rate for mussel patches (without interference)
+
+
+        # calculate intake rate for mudflats (without interference)
+
 
         # execute model.step (move agents and let them eat) todo: pas schedule aan
         self.schedule.step()

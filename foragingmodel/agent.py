@@ -56,14 +56,25 @@ class Bird:
             self.energy_gain = 0
 
             # calculate when to start foraging
-            # self.start_foraging = 0
             self.start_foraging = int(self.model.steps_to_low_tide - (self.time_foraged / 2))
 
             # keep track of time foraged within coming cycle
             self.time_foraged = 0
 
-        # foraging
+        # moving and foraging
         if self.model.time_in_cycle >= self.start_foraging and self.energy_gain < self.energy_goal:
+
+            # check IR on patch
+                # we berekenen dus in dit deel alle IRs al
+
+            # if IR < threshold, move to other patch
+            threshold = self.model.leaving_threshold
+                # kies random patch uit (afhankelijk van dieet, grasland mudflat of mosselpatch)
+                # we berekenen hier al gelijk de IR van de nieuwe patch
+                # update num_agents on patch
+
+            # foraging vindt dan alleen plaats als de patch available is (maak gras altijd available, of check daar niet
+            # voor availability want altijd beschikbaar)
 
             # only forage if patch is available
             if self.model.available_areas[self.pos] > 0:
@@ -73,11 +84,14 @@ class Bird:
 
                     # num of other agents and calculate local dominance
                     num_agents_on_patch, local_dominance = self.calculate_local_dominance(
-                        self.model)  # todo: num_agents moet geupdate worden als agent verplaatst
+                        self.model)
+                    # local_dominance = 100/4
 
                     # calculate competitor density
-                    density_of_competitors = num_agents_on_patch / self.model.available_areas[
+                    num_agents_on_patch = self.model.num_agents_on_patches[self.pos]
+                    density_of_competitors = (num_agents_on_patch - 1)/ self.model.available_areas[
                         self.pos]
+                    # print(density_of_competitors)
 
                     # calculate intake
                     wtw_intake, energy_intake = self.consume_mussel_diet(density_of_competitors, local_dominance)
@@ -228,7 +242,7 @@ class Bird:
 
     def calculate_local_dominance(self, model):
         """
-        Method that calculates local dominance (# of encounters won) for patch agent is currently on
+        Method that calculates local dominance (# of encounters won in %) for patch agent is currently on
 
         Returns number of other agents on same patch and number of encounters won (L)
 
