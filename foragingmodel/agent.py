@@ -57,6 +57,7 @@ class Bird:
 
             # calculate when to start foraging
             self.start_foraging = int(self.model.steps_to_low_tide - (self.time_foraged / 2))
+            self.start_foraging_list.append(self.start_foraging)
 
             # keep track of time foraged within coming cycle
             self.time_foraged = 0
@@ -82,10 +83,10 @@ class Bird:
                 # intake rate mussel bed
                 if self.model.patch_types[self.pos] == "Bed":
 
-                    # num of other agents and calculate local dominance todo: dit moet op andere manier berekent
+                    # num of other agents and calculate local dominance
                     # num_agents_on_patch, local_dominance = self.calculate_local_dominance(
                     #     self.model)
-                    local_dominance = 100/4
+                    local_dominance = self.dominance # todo: check if this is truly correct
 
                     # calculate competitor density
                     num_agents_on_patch = self.model.num_agents_on_patches[self.pos]
@@ -154,7 +155,7 @@ class Bird:
             if self.weight < self.minimum_weight:
                 self.model.schedule.remove(self)
 
-    @staticmethod #todo: moet dit in staticfunction?
+    @staticmethod
     def interference_stillman(density_competitors, local_dominance):
         """Helper method to calculate intake rate reduction as described in Stillman.
         :return:
@@ -177,27 +178,27 @@ class Bird:
 
         return relative_intake_rate
 
-    def calculate_local_dominance(self, model):
-        """
-        Method that calculates local dominance (# of encounters won in %) for patch agent is currently on
-
-        Returns number of other agents on same patch and number of encounters won (L)
-
-        Higher dominance number means more dominance.
-        """
-
-        # find dominance of all agents on same patch (excluding self)
-        dominance_agents_same_patch = [agent.dominance for agent in model.agents_on_patches[self.pos]
-                                if agent.unique_id != self.unique_id]
-
-        # calculate number of encounters won
-        number_of_encounters = len(dominance_agents_same_patch) #todo: hier mss gewoon num_agents_patches van model pakken?
-        if number_of_encounters == 0:
-            L = 0
-        else:
-            agents_with_lower_dominance = [item for item in dominance_agents_same_patch if item < self.dominance] #todo: smaller then or equal?
-            L = (len(agents_with_lower_dominance) / number_of_encounters) * 100
-        return len(dominance_agents_same_patch), L
+    # def calculate_local_dominance(self, model):
+    #     """
+    #     Method that calculates local dominance (# of encounters won in %) for patch agent is currently on
+    #
+    #     Returns number of other agents on same patch and number of encounters won (L)
+    #
+    #     Higher dominance number means more dominance.
+    #     """
+    #
+    #     # find dominance of all agents on same patch (excluding self)
+    #     dominance_agents_same_patch = [agent.dominance for agent in model.agents_on_patches[self.pos]
+    #                             if agent.unique_id != self.unique_id]
+    #
+    #     # calculate number of encounters won
+    #     number_of_encounters = len(dominance_agents_same_patch) #todo: hier mss gewoon num_agents_patches van model pakken?
+    #     if number_of_encounters == 0:
+    #         L = 0
+    #     else:
+    #         agents_with_lower_dominance = [item for item in dominance_agents_same_patch if item < self.dominance] #todo: smaller then or equal?
+    #         L = (len(agents_with_lower_dominance) / number_of_encounters) * 100
+    #     return len(dominance_agents_same_patch), L
 
     def energy_requirements_one_time_step(self, T):
         """
@@ -253,7 +254,6 @@ class Bird:
         energy_goal += self.energy_requirements_one_time_step(mean_T) * num_steps_tidal_cycle
         return energy_goal
 
-
     def consume_mussel_diet(self, density_of_competitors, local_dominance):
         """ Method that lets agent forage on mussel patch. Based on the energy goal and the stomach content
         the intake of an agent is evaluated.
@@ -272,7 +272,7 @@ class Bird:
         # calculate possible intake based on stomach left and digestive rate
         possible_wtw_intake = self.calculate_possible_intake() # g / 10 minutes
 
-        # intake is minimum of possible intake and intake achievable on patch
+        # intake is minimum of possible intake and intake achievable on patch todo: zelfde als bij mudflats maken
         intake_wtw = min(wtw_intake, possible_wtw_intake)  # WtW intake in g
 
         # calculate actual energy intake
@@ -306,38 +306,45 @@ class Bird:
         :return: The amount of wet weight foraged is returned (in g).
         """
 
+        # for cockles, calculate uptake reduction
+        bird_density = (self.model.num_agents_on_patches[self.pos] - 1) / self.model.available_areas[self.pos]
+
+        # parameters
+        attack_distance = 2.0  # webtics, stillman 2002
+        alpha = 0.4  # fitted parameter by webtics
+        relative_intake = self.calculate_cockle_relative_intake(bird_density, attack_distance, alpha)
+
         # get the capture rate of all prey on mudflat (different cockle sizes)
-        capture_rate_kok1, capture_rate_kok2, capture_rate_kokmj, capture_rate_mac \
-            = self.combined_capture_rate_cockle_macoma()
+        total_captured_kok1, total_captured_kok2, total_captured_kokmj, total_captured_mac \
+            = self.model.capture_rates_mudflats
 
-        # wet weight intake rate (g/s)
-        patch_wet_intake = capture_rate_kok1 * self.model.cockle_wet_weight[self.pos][0] \
-                             + capture_rate_kok2 * self.model.cockle_wet_weight[self.pos][1]\
-                             + capture_rate_kokmj * self.model.cockle_wet_weight[self.pos][2]\
-                             + capture_rate_mac * self.model.macoma_wet_weight[self.pos]
-        patch_wet_intake *= (1 - self.model.LeftOverShellfish)
+        # only get captured prey from current patch including interference
+        total_captured_kok1, total_captured_kok2, total_captured_kokmj, total_captured_mac \
+            = total_captured_kok1[self.pos] * relative_intake, \
+              total_captured_kok2[self.pos] * relative_intake, \
+              total_captured_kokmj[self.pos] * relative_intake, \
+              total_captured_mac[self.pos] * relative_intake
 
-        # convert to intake rate of one time step
-        conversion_s_to_timestep = self.model.resolution_min * 60 # todo: dubbel
-        total_patch_intake_wet_weight = patch_wet_intake * conversion_s_to_timestep
+        # wet weight intake
+        patch_wtw_intake = self.model.mudflats_potential_wtw_intake[self.pos] * relative_intake
 
         # calculate possible intake based on stomach left and digestive rate
         possible_wtw_intake = self.calculate_possible_intake()  # g / 10 minutes
 
         # intake is minimum of possible intake and intake achievable on patch
-        intake_wtw = min(total_patch_intake_wet_weight, possible_wtw_intake)   # WtW intake in g
+        intake_wtw = min(patch_wtw_intake, possible_wtw_intake)   # WtW intake in g
 
-        # compare final intake to original patch intake todo: dit is nu wat moeilijker, mss met fracties?
-        if total_patch_intake_wet_weight > 0:
-            fraction_possible_final_intake = intake_wtw / total_patch_intake_wet_weight
+        # compare final intake to original patch intake
+        if patch_wtw_intake > 0:
+            fraction_possible_final_intake = intake_wtw / patch_wtw_intake
         else:
             fraction_possible_final_intake = 0
 
         # calculate final number of prey eaten
-        final_captured_kok1 = capture_rate_kok1 * conversion_s_to_timestep * fraction_possible_final_intake
-        final_captured_kok2 = capture_rate_kok2 * conversion_s_to_timestep * fraction_possible_final_intake
-        final_captured_kokmj = capture_rate_kokmj * conversion_s_to_timestep * fraction_possible_final_intake
-        final_captured_mac = capture_rate_mac * conversion_s_to_timestep * fraction_possible_final_intake
+        final_captured_kok1 = total_captured_kok1 * fraction_possible_final_intake
+        final_captured_kok2 = total_captured_kok2 * fraction_possible_final_intake
+        final_captured_kokmj = total_captured_kokmj * fraction_possible_final_intake
+        final_captured_mac = total_captured_mac * fraction_possible_final_intake
 
         # calculate energy intake
         energy_intake = intake_wtw * self.model.FractionTakenUp * self.model.RatioAFDWtoWet \
@@ -351,7 +358,7 @@ class Bird:
             # fraction of this time step needed to accomplish goal
             fraction_needed = 1 - (surplus / energy_intake)
 
-            # multiply all intakes with fraction needed
+            # multiply all intakes with fraction needed todo: check dit nog een keer
             intake_wtw *= fraction_needed
             energy_intake *= fraction_needed
             final_captured_kok1 *= fraction_needed
@@ -370,64 +377,6 @@ class Bird:
         self.model.cockle_densities[self.pos][2] -= final_captured_kokmj / self.model.patch_areas[self.pos]
         self.model.macoma_density[self.pos] -= final_captured_mac / self.model.patch_areas[self.pos]
         return intake_wtw, energy_intake
-
-    def combined_capture_rate_cockle_macoma(self):
-        """ Method that calculates the intake rate when agent forages on cockles. Three different size classes of
-        cockles are taken into account (0-1, 2 and >2 years old)
-
-        The method looks at the density and weight of the cockles on the patch the agent is currently on and returns
-        the capture rate of the different size class cockles in #/s.
-        """
-
-        # get density and size of all cockle size classes on patch
-        kok1_handling_time = self.model.handling_time_cockles[self.pos][0] # todo: one liner van maken
-        kok2_handling_time = self.model.handling_time_cockles[self.pos][1]
-        kokmj_handling_time = self.model.handling_time_cockles[self.pos][2]
-        kok1_density, kok2_density, kokmj_density = self.model.cockle_densities[self.pos]
-
-        # macoma
-        mac_density = self.model.macoma_density[self.pos]
-        mac_handling_time = self.model.handling_time_macoma[self.pos]
-
-        # parameters
-        leoA = 0.000860373  # Zwarts et al. (1996b), taken from WEBTICS
-        leoB = 0.220524  # Zwarts et al.(1996b)
-        hiddinkA = 0.000625 # Hiddink2003
-        attack_rate = leoA * leoB
-
-        # calculate capture rate for every size class (number of cockles/s)
-        capture_rate_kok1_num = attack_rate * kok1_density # numerator of eq 5.9 webtics
-        capture_rate_kok1_den = attack_rate * kok1_handling_time * kok1_density # denominator without 1 +
-        capture_rate_kok2_num = attack_rate * kok2_density
-        capture_rate_kok2_den = attack_rate * kok2_handling_time * kok2_density
-        capture_rate_kokmj_num = attack_rate * kokmj_density
-        capture_rate_kokmj_den = attack_rate * kokmj_handling_time * kokmj_density
-
-        # capture rate macoma
-        capture_rate_mac_num = hiddinkA * mac_density * self.model.proportion_macoma # only take available macoma into account
-        capture_rate_mac_den = capture_rate_mac_num * mac_handling_time
-
-        # final denominator 5.9 webtics
-        final_denominator = 1 + capture_rate_kok1_den + capture_rate_kok2_den + capture_rate_kokmj_den \
-                            + capture_rate_mac_den
-
-        ##############
-        # for cockles, calculate uptake reduction todo: dit moet binnen agent, rest van capture rate global maken
-        bird_density = (self.model.num_agents_on_patches[self.pos] - 1) / self.model.available_areas[
-                    self.pos]
-
-        # parameters
-        attack_distance = 2.0  # webtics, stillman 2002
-        alpha = 0.4  # fitted parameter by webtics
-        relative_intake = self.calculate_cockle_uptake_reduction(bird_density, attack_distance, alpha)
-
-        # calculate number of captured prey for each size class todo: kan dit niet in betere vectorberekening?
-        capture_rate_kok1 = (capture_rate_kok1_num / final_denominator) * relative_intake
-        capture_rate_kok2 = (capture_rate_kok2_num / final_denominator) * relative_intake
-        capture_rate_kokmj = (capture_rate_kokmj_num / final_denominator) * relative_intake
-        capture_rate_mac = capture_rate_mac_num / final_denominator
-        #################
-        return capture_rate_kok1, capture_rate_kok2, capture_rate_kokmj, capture_rate_mac
 
     def calculate_possible_intake(self):
         """ Method calculated the intake rate a bird can have (which depends on how full its stomach is and also
@@ -488,13 +437,13 @@ class Bird:
         return final_intake_wtw, energy_intake
 
     @staticmethod
-    def calculate_cockle_uptake_reduction(bird_density, attack_distance, alpha):
+    def calculate_cockle_relative_intake(bird_density, attack_distance, alpha):
         """ Method that calculates the uptake reduction for the cockle intake rate due to the
         presence of competitors
         """
         exponent = -np.pi * bird_density * (attack_distance ** 2) * alpha
-        uptake_reduction = np.exp(exponent)
-        return uptake_reduction
+        relative_intake = np.exp(exponent)
+        return relative_intake
 
     # def consume_mussel_diet(self, density_of_competitors, local_dominance):
     #     """ Method that lets agent forage on mussel patch. Based on the energy goal and the stomach content
@@ -605,6 +554,137 @@ class Bird:
     #     # calculate plateau/max intake rate
     #     max_intake_rate = mussel_intake_rate_A * (prey_weight * 1000) ** mussel_intake_rate_B
     #     return max_intake_rate
+    #
+    # def consume_mudflats_diet(self):
+    #     """ Method that lets agent forage on mudflat (currently only cockles taken into account).
+    #
+    #     In this method the depletion of prey on a patch is also implemented.
+    #
+    #     :return: The amount of wet weight foraged is returned (in g).
+    #     """
+    #
+    #     # get the capture rate of all prey on mudflat (different cockle sizes)
+    #     capture_rate_kok1, capture_rate_kok2, capture_rate_kokmj, capture_rate_mac \
+    #         = self.combined_capture_rate_cockle_macoma()
+    #
+    #     # wet weight intake rate (g/s)
+    #     patch_wet_intake = capture_rate_kok1 * self.model.cockle_wet_weight[self.pos][0] \
+    #                          + capture_rate_kok2 * self.model.cockle_wet_weight[self.pos][1]\
+    #                          + capture_rate_kokmj * self.model.cockle_wet_weight[self.pos][2]\
+    #                          + capture_rate_mac * self.model.macoma_wet_weight[self.pos]
+    #     patch_wet_intake *= (1 - self.model.LeftOverShellfish)
+    #
+    #     # convert to intake rate of one time step
+    #     conversion_s_to_timestep = self.model.resolution_min * 60 # todo: dubbel
+    #     total_patch_intake_wet_weight = patch_wet_intake * conversion_s_to_timestep
+    #
+    #     # calculate possible intake based on stomach left and digestive rate
+    #     possible_wtw_intake = self.calculate_possible_intake()  # g / 10 minutes
+    #
+    #     # intake is minimum of possible intake and intake achievable on patch
+    #     intake_wtw = min(total_patch_intake_wet_weight, possible_wtw_intake)   # WtW intake in g
+    #
+    #     # compare final intake to original patch intake todo: dit is nu wat moeilijker, mss met fracties?
+    #     if total_patch_intake_wet_weight > 0:
+    #         fraction_possible_final_intake = intake_wtw / total_patch_intake_wet_weight
+    #     else:
+    #         fraction_possible_final_intake = 0
+    #
+    #     # calculate final number of prey eaten
+    #     final_captured_kok1 = capture_rate_kok1 * conversion_s_to_timestep * fraction_possible_final_intake
+    #     final_captured_kok2 = capture_rate_kok2 * conversion_s_to_timestep * fraction_possible_final_intake
+    #     final_captured_kokmj = capture_rate_kokmj * conversion_s_to_timestep * fraction_possible_final_intake
+    #     final_captured_mac = capture_rate_mac * conversion_s_to_timestep * fraction_possible_final_intake
+    #
+    #     # calculate energy intake
+    #     energy_intake = intake_wtw * self.model.FractionTakenUp * self.model.RatioAFDWtoWet \
+    #                                 * self.model.AFDWenergyContent
+    #
+    #     # check if energy gain does not exceed goal, if so, adapt intake #todo: in functie?
+    #     if self.energy_gain + energy_intake > self.energy_goal:
+    #         # calculate surplus
+    #         surplus = self.energy_gain + energy_intake - self.energy_goal
+    #
+    #         # fraction of this time step needed to accomplish goal
+    #         fraction_needed = 1 - (surplus / energy_intake)
+    #
+    #         # multiply all intakes with fraction needed
+    #         intake_wtw *= fraction_needed
+    #         energy_intake *= fraction_needed
+    #         final_captured_kok1 *= fraction_needed
+    #         final_captured_kok2 *= fraction_needed
+    #         final_captured_kokmj *= fraction_needed
+    #         final_captured_mac *= fraction_needed
+    #
+    #         # update foraging time
+    #         self.time_foraged += fraction_needed
+    #     else:
+    #         self.time_foraged += 1
+    #
+    #     # deplete prey (use actual area of patch)
+    #     self.model.cockle_densities[self.pos][0] -= final_captured_kok1 / self.model.patch_areas[self.pos]
+    #     self.model.cockle_densities[self.pos][1] -= final_captured_kok2 / self.model.patch_areas[self.pos]
+    #     self.model.cockle_densities[self.pos][2] -= final_captured_kokmj / self.model.patch_areas[self.pos]
+    #     self.model.macoma_density[self.pos] -= final_captured_mac / self.model.patch_areas[self.pos]
+    #     return intake_wtw, energy_intake
+
+    # def combined_capture_rate_cockle_macoma(self):
+    #     """ Method that calculates the intake rate when agent forages on cockles. Three different size classes of
+    #     cockles are taken into account (0-1, 2 and >2 years old)
+    #
+    #     The method looks at the density and weight of the cockles on the patch the agent is currently on and returns
+    #     the capture rate of the different size class cockles in #/s.
+    #     """
+    #
+    #     # get density and size of all cockle size classes on patch
+    #     kok1_handling_time = self.model.handling_time_cockles[self.pos][0] # todo: one liner van maken
+    #     kok2_handling_time = self.model.handling_time_cockles[self.pos][1]
+    #     kokmj_handling_time = self.model.handling_time_cockles[self.pos][2]
+    #     kok1_density, kok2_density, kokmj_density = self.model.cockle_densities[self.pos]
+    #
+    #     # macoma
+    #     mac_density = self.model.macoma_density[self.pos]
+    #     mac_handling_time = self.model.handling_time_macoma[self.pos]
+    #
+    #     # parameters
+    #     leoA = 0.000860373  # Zwarts et al. (1996b), taken from WEBTICS
+    #     leoB = 0.220524  # Zwarts et al.(1996b)
+    #     hiddinkA = 0.000625 # Hiddink2003
+    #     attack_rate = leoA * leoB
+    #
+    #     # calculate capture rate for every size class (number of cockles/s)
+    #     capture_rate_kok1_num = attack_rate * kok1_density # numerator of eq 5.9 webtics
+    #     capture_rate_kok1_den = attack_rate * kok1_handling_time * kok1_density # denominator without 1 +
+    #     capture_rate_kok2_num = attack_rate * kok2_density
+    #     capture_rate_kok2_den = attack_rate * kok2_handling_time * kok2_density
+    #     capture_rate_kokmj_num = attack_rate * kokmj_density
+    #     capture_rate_kokmj_den = attack_rate * kokmj_handling_time * kokmj_density
+    #
+    #     # capture rate macoma
+    #     capture_rate_mac_num = hiddinkA * mac_density * self.model.proportion_macoma # only take available macoma into account
+    #     capture_rate_mac_den = capture_rate_mac_num * mac_handling_time
+    #
+    #     # final denominator 5.9 webtics
+    #     final_denominator = 1 + capture_rate_kok1_den + capture_rate_kok2_den + capture_rate_kokmj_den \
+    #                         + capture_rate_mac_den
+    #
+    #     ##############
+    #     # for cockles, calculate uptake reduction todo: dit moet binnen agent, rest van capture rate global maken
+    #     bird_density = (self.model.num_agents_on_patches[self.pos] - 1) / self.model.available_areas[
+    #                 self.pos]
+    #
+    #     # parameters
+    #     attack_distance = 2.0  # webtics, stillman 2002
+    #     alpha = 0.4  # fitted parameter by webtics
+    #     relative_intake = self.calculate_cockle_uptake_reduction(bird_density, attack_distance, alpha)
+    #
+    #     # calculate number of captured prey for each size class todo: kan dit niet in betere vectorberekening?
+    #     capture_rate_kok1 = (capture_rate_kok1_num / final_denominator) * relative_intake
+    #     capture_rate_kok2 = (capture_rate_kok2_num / final_denominator) * relative_intake
+    #     capture_rate_kokmj = (capture_rate_kokmj_num / final_denominator) * relative_intake
+    #     capture_rate_mac = capture_rate_mac_num / final_denominator
+    #     #################
+    #     return capture_rate_kok1, capture_rate_kok2, capture_rate_kokmj, capture_rate_mac
 
 
 

@@ -1,14 +1,3 @@
 {
-  "init_birds" : 1000,
-  "density_mussel" : 0,
-  "density_kokkels_1" : 0,
-  "density_kokkels_2" : 0,
-  "density_kokkels_mj" : 0,
-  "density_macoma" : 100,
-  "init_kok_dry_weight": 600,
-  "patch_name_list" : ["Bed", "Mudflat", "Grassland"],
-  "patch_type_counts" : [0, 0, 0],
-  "cockle_sizes" : [30, 30, 30],
-  "cockle_wet_weight": [0.8, 0.8, 0.8 ],
-  "cockle_fresh_weight": [10, 10, 10]
+  "init_birds" : 1000
 }

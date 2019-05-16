@@ -143,7 +143,7 @@ def get_artificial_patch_data():
     artificial_patches['Macoma_dens'] = [np.nan, 50, np.nan]
     artificial_patches['Cockle_1j_FW'] = [0, 5, np.nan]
     artificial_patches['Cockle_2j_FW'] = [0, 5, np.nan]
-    artificial_patches['Cockle_mj_FW'] = [0, 10, np.nan]
+    artificial_patches['Cockle_mj_FW'] = [0, 0, np.nan]
     artificial_patches['Cockle_1j_WW'] = [0, 1, np.nan]
     artificial_patches['Cockle_2j_WW'] = [0, 1, np.nan]
     artificial_patches['Cockle_mj_WW'] = [0, 5, np.nan]

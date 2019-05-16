@@ -120,17 +120,18 @@ class OystercatcherModel(Model):
         self.handling_time_cockles = None
 
         self.mussel_potential_wtw_intake, self.mussel_potentional_energy_intake = [None, None]
+        self.mudflats_potential_wtw_intake, self.mudflats_potential_energy_intake, self.capture_rates_mudflats \
+            = [None, None, None]
 
         # create birds
         for i in range(self.init_birds):
 
             # give random initial position #todo: should be according to ideal distribution
-            # pos = random.randrange(self.num_patches + 1)
-            pos = 0
+            pos = 0 # todo: maak dit anders. Zorg ervoor dat er duidelijker onderscheid is tussen mossel/mudflats
 
             # give agent individual properties
             unique_id = self.next_id() # every agent has unique id
-            dominance = unique_id # todo: should be taken from distribution/data
+            dominance = np.random.randint(1, 101) # todo: should be taken from distribution/data
 
             # instantiate class
             bird = Bird(unique_id, pos, self, dominance)
@@ -183,7 +184,8 @@ class OystercatcherModel(Model):
         self.mussel_potential_wtw_intake, self.mussel_potentional_energy_intake = self.mussel_potential_intake()
 
         # calculate intake rate for mudflats (without interference)
-
+        self.mudflats_potential_wtw_intake, self.mudflats_potential_energy_intake, self.capture_rates_mudflats \
+            = self.mudflats_potential_intake()
 
         # execute model.step (move agents and let them eat) todo: pas schedule aan
         self.schedule.step()
@@ -237,7 +239,7 @@ class OystercatcherModel(Model):
         :return: potential wtw intake (g) and energy intake (kJ)
         """
 
-        # calculate capture rate and include interference
+        # calculate capture rate
         capture_rate = self.functional_response_mussel(self.mussel_density, self.mussel_afdw)
 
         # wet intake rate
@@ -275,4 +277,85 @@ class OystercatcherModel(Model):
         handling_time = (mussel_afdw * 1000) / max_intake_rate  # convert prey to mg
         capture_rate = (attack_rate * mussel_density) / (1 + attack_rate * handling_time * mussel_density)
         return capture_rate
+
+    def mudflats_potential_intake(self):
+        """
+        Calculates final potential intake on mussel patches (interference thus excluded) for one time step.
+
+        :return: potential wtw intake (g) and energy intake (kJ)
+        """
+
+        # calculate capture rate
+        capture_rate_kok1, capture_rate_kok2, capture_rate_kokmj, capture_rate_mac \
+            = self.functional_response_mudflats(self.handling_time_cockles, self.cockle_densities,
+                                                self.handling_time_macoma, self.macoma_density,
+                                                self.proportion_macoma)
+
+        # wet weight intake rate (g/s)
+        patch_wet_intake = capture_rate_kok1 * self.cockle_wet_weight[:, 0] \
+                           + capture_rate_kok2 * self.cockle_wet_weight[:, 1] \
+                           + capture_rate_kokmj * self.cockle_wet_weight[:, 2] \
+                           + capture_rate_mac * self.macoma_wet_weight
+        patch_wet_intake *= (1 - self.LeftOverShellfish)
+
+        # convert to intake rate of one time step
+        conversion_s_to_timestep = self.resolution_min * 60  # todo: dubbel
+        total_intake_wtw = patch_wet_intake * conversion_s_to_timestep
+
+        # calculate potential energy intake
+        energy_intake = total_intake_wtw * self.FractionTakenUp * self.RatioAFDWtoWet \
+                        * self.AFDWenergyContent
+
+        # calculate total captured prey in one time step
+        total_captured_prey = [capture_rate_kok1 * conversion_s_to_timestep,
+                               capture_rate_kok2 * conversion_s_to_timestep,
+                               capture_rate_kokmj * conversion_s_to_timestep,
+                               capture_rate_mac * conversion_s_to_timestep]
+        return total_intake_wtw, energy_intake, total_captured_prey
+
+    @staticmethod
+    def functional_response_mudflats(handling_time_cockles, cockle_densities, handling_time_mac, mac_density,
+                                     proportion_macoma):
+        """
+        Functional response as described in webtics.
+
+        :return: capture rate in # prey/s for all different prey types
+        """
+
+        # get density and size of all cockle size classes on patch #todo: dit kan op nettere manier uitgepakt
+        kok1_handling_time = handling_time_cockles[:, 0]
+        kok2_handling_time = handling_time_cockles[:, 1]
+        kokmj_handling_time = handling_time_cockles[:, 2]
+        kok1_density = cockle_densities[:, 0]
+        kok2_density = cockle_densities[:, 1]
+        kokmj_density = cockle_densities[:, 2]
+
+        # parameters todo: zet in parameter file
+        leoA = 0.000860373  # Zwarts et al. (1996b), taken from WEBTICS
+        leoB = 0.220524  # Zwarts et al.(1996b)
+        hiddinkA = 0.000625  # Hiddink2003
+        attack_rate = leoA * leoB
+
+        # calculate capture rate for every cockle size class (number of cockles/s)
+        capture_rate_kok1_num = attack_rate * kok1_density  # numerator of eq 5.9 webtics
+        capture_rate_kok1_den = attack_rate * kok1_handling_time * kok1_density  # denominator without 1 +
+        capture_rate_kok2_num = attack_rate * kok2_density
+        capture_rate_kok2_den = attack_rate * kok2_handling_time * kok2_density
+        capture_rate_kokmj_num = attack_rate * kokmj_density
+        capture_rate_kokmj_den = attack_rate * kokmj_handling_time * kokmj_density
+
+        # capture rate macoma
+        capture_rate_mac_num = hiddinkA * mac_density * proportion_macoma  # only take available macoma into account
+        capture_rate_mac_den = capture_rate_mac_num * handling_time_mac
+
+        # final denominator 5.9 webtics
+        final_denominator = 1 + capture_rate_kok1_den + capture_rate_kok2_den + capture_rate_kokmj_den \
+                            + capture_rate_mac_den
+
+        # calculate number of captured prey for each size class
+        capture_rate_kok1 = (capture_rate_kok1_num / final_denominator)
+        capture_rate_kok2 = (capture_rate_kok2_num / final_denominator)
+        capture_rate_kokmj = (capture_rate_kokmj_num / final_denominator)
+        capture_rate_mac = capture_rate_mac_num / final_denominator
+        return capture_rate_kok1, capture_rate_kok2, capture_rate_kokmj, capture_rate_mac
 
