@@ -178,28 +178,6 @@ class Bird:
 
         return relative_intake_rate
 
-    # def calculate_local_dominance(self, model):
-    #     """
-    #     Method that calculates local dominance (# of encounters won in %) for patch agent is currently on
-    #
-    #     Returns number of other agents on same patch and number of encounters won (L)
-    #
-    #     Higher dominance number means more dominance.
-    #     """
-    #
-    #     # find dominance of all agents on same patch (excluding self)
-    #     dominance_agents_same_patch = [agent.dominance for agent in model.agents_on_patches[self.pos]
-    #                             if agent.unique_id != self.unique_id]
-    #
-    #     # calculate number of encounters won
-    #     number_of_encounters = len(dominance_agents_same_patch) #todo: hier mss gewoon num_agents_patches van model pakken?
-    #     if number_of_encounters == 0:
-    #         L = 0
-    #     else:
-    #         agents_with_lower_dominance = [item for item in dominance_agents_same_patch if item < self.dominance] #todo: smaller then or equal?
-    #         L = (len(agents_with_lower_dominance) / number_of_encounters) * 100
-    #     return len(dominance_agents_same_patch), L
-
     def energy_requirements_one_time_step(self, T):
         """
         Calculate energy requirements for one time step.
@@ -686,7 +664,27 @@ class Bird:
     #     #################
     #     return capture_rate_kok1, capture_rate_kok2, capture_rate_kokmj, capture_rate_mac
 
-
+    # def calculate_local_dominance(self, model):
+    #     """
+    #     Method that calculates local dominance (# of encounters won in %) for patch agent is currently on
+    #
+    #     Returns number of other agents on same patch and number of encounters won (L)
+    #
+    #     Higher dominance number means more dominance.
+    #     """
+    #
+    #     # find dominance of all agents on same patch (excluding self)
+    #     dominance_agents_same_patch = [agent.dominance for agent in model.agents_on_patches[self.pos]
+    #                             if agent.unique_id != self.unique_id]
+    #
+    #     # calculate number of encounters won
+    #     number_of_encounters = len(dominance_agents_same_patch) #todo: hier mss gewoon num_agents_patches van model pakken?
+    #     if number_of_encounters == 0:
+    #         L = 0
+    #     else:
+    #         agents_with_lower_dominance = [item for item in dominance_agents_same_patch if item < self.dominance] #todo: smaller then or equal?
+    #         L = (len(agents_with_lower_dominance) / number_of_encounters) * 100
+    #     return len(dominance_agents_same_patch), L
 
 
 
