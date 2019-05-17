@@ -87,15 +87,6 @@ class Bird:
                 pass
                  #self.move()
 
-                # bereken nieuwe intake rate
-
-                # kies random patch uit (afhankelijk van dieet, grasland mudflat of mosselpatch)
-                # we berekenen hier al gelijk de IR van de nieuwe patch
-                # update num_agents on patch
-
-            # foraging vindt dan alleen plaats als de patch available is (maak gras altijd available, of check daar niet
-            # voor availability want altijd beschikbaar)
-
             # only forage if patch is available
             if self.model.available_areas[self.pos] > 0:
 
@@ -198,6 +189,7 @@ class Bird:
 
         # choose (random) new patch
 
+        # important: update num_agents_on_patch
 
     @staticmethod
     def interference_stillman_float(density_competitors, local_dominance):
