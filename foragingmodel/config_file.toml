@@ -1,6 +1,18 @@
 ## Foragingmodel Parameter File ##
 
-### BLABLA ####
-x = 5
-z = 7
-Aa = 9
+
+
+##### Initialisation parameters #####
+
+init_birds = 99
+
+
+##### Prey Characteristics #####
+
+AFDWenergyContent = 22.5 # kJ / gram	ZwartEnsDurellEtAl1996
+RatioAFDWtoWet = 0.16 # afdw per g wtw	ZwartEnsDurellEtAl1996
+
+# conversion cockle FW to size
+CockFWtoSizeA = 14.610 # Ens
+CockFWtoSizeB = 0.317766
+

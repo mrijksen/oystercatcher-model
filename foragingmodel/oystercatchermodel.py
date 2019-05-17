@@ -38,12 +38,13 @@ class OystercatcherModel(Model):
         self.resolution_min = 30 # time step size # todo: calculate with input data
 
         # prey characteristics todo: in parameter file
-        self.AFDWenergyContent = 22.5 # kJ/gram
-        self.RatioAFDWtoWet = 0.16 # afdw per gram wet weight for cockles and mussel
+        self.AFDWenergyContent = params["AFDWenergyContent"] # kJ/gram
+        self.RatioAFDWtoWet = params["RatioAFDWtoWet"] # afdw per gram wet weight for cockles and mussel
+        self.CockFWtoSizeA = params["CockFWtoSizeA"] # Ens, Webtics, L = a FW ^ b(mm = a gram ^b)
+        self.CockFWtoSizeB = params["CockFWtoSizeB"]
+
         self.FractionTakenUp = 0.85  # Speakman1987, KerstenVisser1996, KerstenPiersma1987, ZwartsBlomert1996
-        self.LeftOverShellfish = 0.1 # ZwartEnsKerstenetal1996
-        self.CockFWtoSizeA = 14.610 # Ens, Webtics, L = a FW ^ b(mm = a gram ^b)
-        self.CockFWtoSizeB = 0.317766
+        self.LeftOverShellfish = 0.1  # ZwartEnsKerstenetal1996
 
         # threshold to leave patch
         self.leaving_threshold = 20.45685 / 1000 # IR at which 623g bird with mean effic needs 12 hours of foraging kJ/s
