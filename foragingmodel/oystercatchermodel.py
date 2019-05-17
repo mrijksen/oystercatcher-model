@@ -122,12 +122,13 @@ class OystercatcherModel(Model):
         self.mussel_potential_wtw_intake, self.mussel_potentional_energy_intake = [None, None]
         self.mudflats_potential_wtw_intake, self.mudflats_potential_energy_intake, self.capture_rates_mudflats \
             = [None, None, None]
+        self.grassland_potential_wtw_intake, self.grassland_potential_energy_intake = [None, None]
 
         # create birds
         for i in range(self.init_birds):
 
             # give random initial position #todo: should be according to ideal distribution
-            pos = 2 # todo: maak dit anders. Zorg ervoor dat er duidelijker onderscheid is tussen mossel/mudflats
+            pos = 1 # todo: maak dit anders. Zorg ervoor dat er duidelijker onderscheid is tussen mossel/mudflats
 
             # give agent individual properties
             unique_id = self.next_id() # every agent has unique id
@@ -186,6 +187,9 @@ class OystercatcherModel(Model):
         # calculate intake rate for mudflats (without interference)
         self.mudflats_potential_wtw_intake, self.mudflats_potential_energy_intake, self.capture_rates_mudflats \
             = self.mudflats_potential_intake()
+
+        # calculate intake on grassland
+        self.grassland_potential_wtw_intake, self.grassland_potential_energy_intake = self.grassland_potential_intake()
 
         # execute model.step (move agents and let them eat) todo: pas schedule aan
         self.schedule.step()
@@ -358,4 +362,26 @@ class OystercatcherModel(Model):
         capture_rate_kokmj = (capture_rate_kokmj_num / final_denominator)
         capture_rate_mac = capture_rate_mac_num / final_denominator
         return capture_rate_kok1, capture_rate_kok2, capture_rate_kokmj, capture_rate_mac
+
+    def grassland_potential_intake(self):
+        """ Method that lets agent forage on grassland patch. Based on the energy goal and the stomach content
+        the intake of an agent is evaluated.
+
+        The patch depletion is also implemented.
+
+        Returns the wet weight consumed (g).
+        """
+
+        # parameters todo: zet in file
+        conversion_afdw_wtw = 0.17 # conversion from thesis Jeroen Onrust
+
+        # intake from Stillman (also used in webtics)
+        afdw_intake_grassland = (0.53 * 60 * self.resolution_min) / 1000 # g / time step 10 mins, Stillman2000
+
+        # wtw intake
+        wtw_intake = afdw_intake_grassland * 1 / conversion_afdw_wtw # g / time step
+
+        # calculate energy intake
+        energy_intake = (afdw_intake_grassland * self.AFDWenergyContent)  # kJ
+        return wtw_intake, energy_intake
 

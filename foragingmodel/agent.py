@@ -70,6 +70,7 @@ class Bird:
 
             # if IR < threshold, move to other patch
             threshold = self.model.leaving_threshold
+            
                 # kies random patch uit (afhankelijk van dieet, grasland mudflat of mosselpatch)
                 # we berekenen hier al gelijk de IR van de nieuwe patch
                 # update num_agents on patch
@@ -356,47 +357,23 @@ class Bird:
         self.model.macoma_density[self.pos] -= final_captured_mac / self.model.patch_areas[self.pos]
         return intake_wtw, energy_intake
 
-    def calculate_possible_intake(self):
-        """ Method calculated the intake rate a bird can have (which depends on how full its stomach is and also
-        the digestive rate)
-        """
-
-        # check stomach space left
-        stomach_left = self.max_stomach_content - self.stomach_content  # g
-
-        # calculate possible intake based on stomach left and digestive rate
-        possible_wtw_intake = self.max_digestive_rate + stomach_left  # g / 10 minutes
-        return possible_wtw_intake
-
     def consume_grassland_diet(self):
-        """ Method that lets agent forage on grassland patch. Based on the energy goal and the stomach content
-        the intake of an agent is evaluated.
 
-        The patch depletion is also implemented.
-
-        Returns the wet weight consumed (g).
-        """
-
-        # parameters
-        conversion_afdw_wtw = 0.17 # conversion from thesis Jeroen Onrust
-
-        # intake from Stillman (also used in webtics) % todo: dit hoeft niet elke keer worden te berekent
-        afdw_intake_grassland = (0.53 * 60 * self.model.resolution_min) / 1000 # g / time step 10 mins, Stillman2000
-
-        # wtw intake % todo: dit hoeft niet elke keer te worden berekent
-        wtw_intake = afdw_intake_grassland * 1 / conversion_afdw_wtw # g / time step
+        potential_wtw_intake, potential_energy_intake = self.model.grassland_potential_wtw_intake, \
+                                                        self.model.grassland_potential_energy_intake
 
         # calculate possible wtw intake based on stomach left and digestive rate
         possible_wtw_intake = self.calculate_possible_intake()  # g / time step
 
         # intake is minimum of possible intake and intake achievable on patch
-        final_intake_wtw = min(wtw_intake, possible_wtw_intake) * self.model.FractionTakenUp # WtW intake in g
+        final_intake_wtw = min(potential_wtw_intake, possible_wtw_intake) * self.model.FractionTakenUp # WtW intake in g
 
         # calculate energy intake, multiply with fraction of possible intake divided by max intake
-        energy_intake = (afdw_intake_grassland * self.model.AFDWenergyContent) * final_intake_wtw / wtw_intake # kJ
+        energy_intake = potential_energy_intake * final_intake_wtw / potential_wtw_intake  # kJ
 
-        # check if energy gain does not exceed goal, if so, adapt intake #todo: dit in functie?
+        # check if energy gain does not exceed goal, if so, adapt intake #todo: dit in functie? nu driedubbel
         if self.energy_gain + energy_intake > self.energy_goal:
+
             # calculate surplus
             surplus = self.energy_gain + energy_intake - self.energy_goal
 
@@ -411,8 +388,19 @@ class Bird:
             self.time_foraged += fraction_needed
         else:
             self.time_foraged += 1
-
         return final_intake_wtw, energy_intake
+
+    def calculate_possible_intake(self):
+        """ Method calculated the intake rate a bird can have (which depends on how full its stomach is and also
+        the digestive rate)
+        """
+
+        # check stomach space left
+        stomach_left = self.max_stomach_content - self.stomach_content  # g
+
+        # calculate possible intake based on stomach left and digestive rate
+        possible_wtw_intake = self.max_digestive_rate + stomach_left  # g / 10 minutes
+        return possible_wtw_intake
 
     @staticmethod
     def calculate_cockle_relative_intake(bird_density, attack_distance, alpha):
@@ -685,6 +673,52 @@ class Bird:
     #         agents_with_lower_dominance = [item for item in dominance_agents_same_patch if item < self.dominance] #todo: smaller then or equal?
     #         L = (len(agents_with_lower_dominance) / number_of_encounters) * 100
     #     return len(dominance_agents_same_patch), L
+
+    # def consume_grassland_diet(self):
+    #     """ Method that lets agent forage on grassland patch. Based on the energy goal and the stomach content
+    #     the intake of an agent is evaluated.
+    #
+    #     The patch depletion is also implemented.
+    #
+    #     Returns the wet weight consumed (g).
+    #     """
+    #
+    #     # parameters
+    #     conversion_afdw_wtw = 0.17 # conversion from thesis Jeroen Onrust
+    #
+    #     # intake from Stillman (also used in webtics) %
+    #     afdw_intake_grassland = (0.53 * 60 * self.model.resolution_min) / 1000 # g / time step 10 mins, Stillman2000
+    #
+    #     # wtw intake %
+    #     wtw_intake = afdw_intake_grassland * 1 / conversion_afdw_wtw # g / time step
+    #
+    #     # calculate possible wtw intake based on stomach left and digestive rate
+    #     possible_wtw_intake = self.calculate_possible_intake()  # g / time step
+    #
+    #     # intake is minimum of possible intake and intake achievable on patch
+    #     final_intake_wtw = min(wtw_intake, possible_wtw_intake) * self.model.FractionTakenUp # WtW intake in g
+    #
+    #     # calculate energy intake, multiply with fraction of possible intake divided by max intake
+    #     energy_intake = (afdw_intake_grassland * self.model.AFDWenergyContent) * final_intake_wtw / wtw_intake # kJ
+    #
+    #     # check if energy gain does not exceed goal, if so, adapt intake
+    #     if self.energy_gain + energy_intake > self.energy_goal:
+    #         # calculate surplus
+    #         surplus = self.energy_gain + energy_intake - self.energy_goal
+    #
+    #         # fraction of this time step needed to accomplish goal
+    #         fraction_needed = 1 - (surplus / energy_intake)
+    #
+    #         # multiply all intakes with fraction needed
+    #         final_intake_wtw *= fraction_needed
+    #         energy_intake *= fraction_needed
+    #
+    #         # update foraging time
+    #         self.time_foraged += fraction_needed
+    #     else:
+    #         self.time_foraged += 1
+    #
+    #     return final_intake_wtw, energy_intake
 
 
 
