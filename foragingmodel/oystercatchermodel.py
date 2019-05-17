@@ -46,16 +46,20 @@ class OystercatcherModel(Model):
         self.CockFWtoSizeB = 0.317766
 
         # threshold to leave patch
-        self.leaving_threshold = 20.45685 # IR at which 623g bird with mean efficientie needs 12 hours of foraging J/s
+        self.leaving_threshold = 20.45685 / 1000 # IR at which 623g bird with mean effic needs 12 hours of foraging kJ/s
 
         # calculate number of time steps in total
         self.num_steps = df_env.shape[0]
 
         # patches characteristics
         self.patch_ids = df_patch_data.patchID.tolist()
-        self.patch_types = df_patch_data.type.tolist()
+        self.patch_types = df_patch_data.type.values
         self.patch_areas = df_patch_data.area.values
         self.num_patches = df_patch_data.shape[0]
+
+        # patches for shellfish/wormspecialists
+        self.patch_indices_mudflats = np.where(self.patch_types == "Mudflat")
+        self.patch_indices_beds = np.where(self.patch_types == "Bed")
 
         # cockle data todo: dit moet geupdate worden elke tidal
         self.cockle_fresh_weight = df_patch_data[['Cockle_1j_FW',
@@ -74,11 +78,7 @@ class OystercatcherModel(Model):
         self.handling_time_macoma = self.calculate_handling_time_macoma()  # does not change during simulation
 
         # mussel data
-        self.musselcover = df_patch_data['musselcover'].values # todo: add cover to capture rate/interference
-        self.mussel_density = 999999 # infinite mussel density
-
-        # mussel patches
-        self.mussel_density = 9999999  # infinitely rich mussel patches
+        self.mussel_density = 1 # infinitely rich mussel patches
         self.mussel_wtw_gain = -0.0025 / (24 / (self.resolution_min / 60))  # wtw gain per time step, GossCustard2001
         self.mussel_afdw = 0.850  # g AFDW GossCustard2001 # todo: dit moet veranderen
         self.mussel_wet_weight = self.mussel_afdw / self.RatioAFDWtoWet  # g WtW calculated with conversion factor
@@ -119,7 +119,8 @@ class OystercatcherModel(Model):
         self.cockle_sizes = None
         self.handling_time_cockles = None
 
-        self.mussel_potential_wtw_intake, self.mussel_potentional_energy_intake = [None, None]
+        # intake rate variables
+        self.mussel_potential_wtw_intake, self.mussel_potential_energy_intake = [None, None]
         self.mudflats_potential_wtw_intake, self.mudflats_potential_energy_intake, self.capture_rates_mudflats \
             = [None, None, None]
         self.grassland_potential_wtw_intake, self.grassland_potential_energy_intake = [None, None]
@@ -128,7 +129,7 @@ class OystercatcherModel(Model):
         for i in range(self.init_birds):
 
             # give random initial position #todo: should be according to ideal distribution
-            pos = 1 # todo: maak dit anders. Zorg ervoor dat er duidelijker onderscheid is tussen mossel/mudflats
+            pos = 0 # todo: maak dit anders. Zorg ervoor dat er duidelijker onderscheid is tussen mossel/mudflats
 
             # give agent individual properties
             unique_id = self.next_id() # every agent has unique id
@@ -182,7 +183,7 @@ class OystercatcherModel(Model):
             # todo: sowieso voor elke patch de non-interference IR berekenen (in plaats van in agents)
 
         # calculate intake rate for mussel patches (without interference)
-        self.mussel_potential_wtw_intake, self.mussel_potentional_energy_intake = self.mussel_potential_intake()
+        self.mussel_potential_wtw_intake, self.mussel_potential_energy_intake = self.mussel_potential_intake()
 
         # calculate intake rate for mudflats (without interference)
         self.mudflats_potential_wtw_intake, self.mudflats_potential_energy_intake, self.capture_rates_mudflats \
@@ -376,7 +377,7 @@ class OystercatcherModel(Model):
         conversion_afdw_wtw = 0.17 # conversion from thesis Jeroen Onrust
 
         # intake from Stillman (also used in webtics)
-        afdw_intake_grassland = (0.53 * 60 * self.resolution_min) / 1000 # g / time step 10 mins, Stillman2000
+        afdw_intake_grassland = (0.53 * 60 * self.resolution_min) / 1000 # g / time step, Stillman2000
 
         # wtw intake
         wtw_intake = afdw_intake_grassland * 1 / conversion_afdw_wtw # g / time step

@@ -15,7 +15,7 @@ class Bird:
         # this should be read from data file
         self.dominance = dominance
         self.pos = pos
-        # self.specialist = 'shellfish'
+        self.specialist = 'shellfish'
         self.start_foraging = None # number of steps after high tide
         self.time_foraged = 6 #todo: welke initialisatie waarde ? let op tijdstap
 
@@ -66,11 +66,29 @@ class Bird:
         if self.model.time_in_cycle >= self.start_foraging and self.energy_gain < self.energy_goal:
 
             # check IR on patch
-                # we berekenen dus in dit deel alle IRs al
+            if self.model.patch_types[self.pos] == "Bed":
+
+                # interference intake reduction
+                density_of_competitors = (self.model.num_agents_on_patches[self.pos] - 1)\
+                                         / self.model.available_areas[self.pos]
+                relative_uptake = self.interference_stillman_float(density_of_competitors, self.dominance)
+
+                # potential intake rate (J/s)
+                potential_energy_intake_rate = self.model.mussel_potential_energy_intake * relative_uptake \
+                                               / (self.model.resolution_min * 60) #todo: dit mss al in model berekenen?
+            elif self.model.patch_types[self.pos] == "Mudflat":
+                pass
+            elif self.model.patch_types[self.pos] == "Grassland":
+                pass
 
             # if IR < threshold, move to other patch
-            threshold = self.model.leaving_threshold
-            
+            if potential_energy_intake_rate * relative_uptake < self.model.leaving_threshold:
+                 # move agent
+                pass
+                 #self.move()
+
+                # bereken nieuwe intake rate
+
                 # kies random patch uit (afhankelijk van dieet, grasland mudflat of mosselpatch)
                 # we berekenen hier al gelijk de IR van de nieuwe patch
                 # update num_agents on patch
@@ -84,9 +102,9 @@ class Bird:
                 # intake rate mussel bed
                 if self.model.patch_types[self.pos] == "Bed":
 
-                    # num of other agents and calculate local dominance
-                    # num_agents_on_patch, local_dominance = self.calculate_local_dominance(
-                    #     self.model)
+                    # # num of other agents and calculate local dominance
+                    # # num_agents_on_patch, local_dominance = self.calculate_local_dominance(
+                    # #     self.model)
                     local_dominance = self.dominance # todo: check if this is truly correct
 
                     # calculate competitor density
@@ -105,7 +123,7 @@ class Bird:
 
                 # intake rate mudflat
                 elif self.model.patch_types[self.pos] == "Mudflat":
-                    wtw_intake, energy_intake = self.consume_mudflats_diet()
+                    # wtw_intake, energy_intake = self.consume_mudflats_diet()
 
                     # update stomach content (add wet weight)
                     self.stomach_content += wtw_intake
@@ -156,9 +174,37 @@ class Bird:
             if self.weight < self.minimum_weight:
                 self.model.schedule.remove(self)
 
+    def move(self):
+        """
+        Agent moves if IR on patch is too low.
+
+        Agent should find patch (depending on diet specialization) with IR > threshold.
+
+        Depending on diet, if no patch is available, a bird stops foraging or moves to grassland.
+        :return:
+        """
+
+        # calculate intake rate on mudflats without interference
+
+        # calculate relative intake rate on mudflats
+
+        # if specialist is shellfish, also calculate IR on beds
+
+            # calculate relative IR for mussel beds
+
+        # check if there are patches with IR > threshold
+
+        # if no patch is available, stop foraging or move to grassland
+
+        # choose (random) new patch
+
+
     @staticmethod
-    def interference_stillman(density_competitors, local_dominance):
+    def interference_stillman_float(density_competitors, local_dominance):
         """Helper method to calculate intake rate reduction as described in Stillman.
+
+        This method takes the density_competitors as a float. (Use this function in case density competitors is a
+        float since it is much faster than the array version for floats).
         :return:
         """
 
@@ -177,6 +223,31 @@ class Bird:
         else:
             relative_intake_rate = 1
 
+        return relative_intake_rate
+
+    @staticmethod
+    def interference_stillman_array(density_competitors, local_dominance):
+        """Helper method to calculate intake rate reduction as described in Stillman.
+
+        Note that density_competitors should be given as np.array to ensure vector calculations work.
+        :return:
+        """
+
+        # create array (in case density_competitors is float)
+        density_competitors = np.array(density_competitors)
+
+        # parameters
+        competitors_threshold = 158  # density of competitors above which interference occurs ha-1 todo: welke nemen?
+        a = 0.437  # parameters for stabbers as described by Stillman 1996
+        b = -0.00721  # todo: check 587 for threshold
+
+        # set density competitors to ha
+        density_competitors = density_competitors * 10000
+
+        # calculate relative intake rate
+        m = a + b * local_dominance
+        relative_intake_rate = np.where(density_competitors > competitors_threshold,
+                                        ((density_competitors + 1) / (competitors_threshold + 1)) ** -m, 1)
         return relative_intake_rate
 
     def energy_requirements_one_time_step(self, T):
@@ -242,8 +313,8 @@ class Bird:
         Returns the wet weight consumed (g).
         """
 
-        # interference intake reduction
-        relative_uptake = self.interference_stillman(density_of_competitors, local_dominance)
+        # # interference intake reduction
+        relative_uptake = self.interference_stillman_float(density_of_competitors, local_dominance)
 
         # wet intake rate (potential intake rate including interference)
         wtw_intake = self.model.mussel_potential_wtw_intake * relative_uptake
@@ -686,10 +757,10 @@ class Bird:
     #     # parameters
     #     conversion_afdw_wtw = 0.17 # conversion from thesis Jeroen Onrust
     #
-    #     # intake from Stillman (also used in webtics) %
+    #     # intake from Stillman (also used in webtics) % 
     #     afdw_intake_grassland = (0.53 * 60 * self.model.resolution_min) / 1000 # g / time step 10 mins, Stillman2000
     #
-    #     # wtw intake %
+    #     # wtw intake % 
     #     wtw_intake = afdw_intake_grassland * 1 / conversion_afdw_wtw # g / time step
     #
     #     # calculate possible wtw intake based on stomach left and digestive rate
@@ -701,7 +772,7 @@ class Bird:
     #     # calculate energy intake, multiply with fraction of possible intake divided by max intake
     #     energy_intake = (afdw_intake_grassland * self.model.AFDWenergyContent) * final_intake_wtw / wtw_intake # kJ
     #
-    #     # check if energy gain does not exceed goal, if so, adapt intake
+    #     # check if energy gain does not exceed goal, if so, adapt intake 
     #     if self.energy_gain + energy_intake > self.energy_goal:
     #         # calculate surplus
     #         surplus = self.energy_gain + energy_intake - self.energy_goal

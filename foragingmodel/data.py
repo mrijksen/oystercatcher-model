@@ -213,7 +213,7 @@ def get_part_of_environmental_data():
 
     # location of environmental data todo: dit ook in data.py zetten? en alleen startjaar meegevem?
     env_data_dir = 'C:/Users/Marleen/Documents/thesis project/oystercatcher-model/Input data/'
-    env_data_filename = '2017_9_1_to_2018_3_1.pkl'
+    env_data_filename = '2017_9_1_to_2017_9_10.pkl'
     env_data_path = env_data_dir + env_data_filename
     df_env = pd.read_pickle(env_data_path)
     return df_env
