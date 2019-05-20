@@ -1,16 +1,12 @@
 """
 Foraging model
-================================================
 
+Created by: Marleen Rijksen
 """
 
 from schedule import RandomActivation
 from agent import Bird
 from model import Model
-
-import random
-
-import data
 
 from collections import defaultdict
 import numpy as np
@@ -37,7 +33,7 @@ class OystercatcherModel(Model):
         self.init_birds = params["init_birds"]
         self.resolution_min = 30 # time step size # todo: calculate with input data
 
-        # prey characteristics todo: in parameter file
+        # prey characteristics
         self.AFDWenergyContent = params["AFDWenergyContent"] # kJ/gram
         self.RatioAFDWtoWet = params["RatioAFDWtoWet"] # afdw per gram wet weight for cockles and mussel
         self.CockFWtoSizeA = params["CockFWtoSizeA"] # Ens, Webtics, L = a FW ^ b(mm = a gram ^b)
@@ -92,7 +88,7 @@ class OystercatcherModel(Model):
         # use schedule from schedule.py that randomly activates agents
         self.schedule = RandomActivation(self)
 
-        # todo: datacollector here
+        # todo: datacollector here, think about all data we want to collect
         self.data = defaultdict(list)
 
         # create lists of environmental data input
@@ -119,6 +115,7 @@ class OystercatcherModel(Model):
         self.new_tidal_cycle = None # boolean to check if new cycle starts
         self.cockle_sizes = None
         self.handling_time_cockles = None
+        self.available_areas = None
 
         # intake rate variables
         self.mussel_potential_wtw_intake, self.mussel_potential_energy_intake = [None, None]
@@ -126,11 +123,12 @@ class OystercatcherModel(Model):
             = [None, None, None]
         self.grassland_potential_wtw_intake, self.grassland_potential_energy_intake = [None, None]
 
-        # create birds
+        # create birds todo: gebruik hier de verdeling van HK voor de vogels, en maak een lijst met alle vogels
         for i in range(self.init_birds):
 
             # give random initial position #todo: should be according to ideal distribution
-            pos = 0 # todo: maak dit anders. Zorg ervoor dat er duidelijker onderscheid is tussen mossel/mudflats
+            pos = 3 # todo: maak dit anders. Zorg ervoor dat er duidelijker onderscheid is tussen mossel/mudflats
+            # todo: wat wordt de initial distribution voor de vogels -> Waarschijnlijk random
 
             # give agent individual properties
             unique_id = self.next_id() # every agent has unique id
@@ -242,7 +240,7 @@ class OystercatcherModel(Model):
         """
         Calculates final potential intake on mussel patches (interference thus excluded) for one time step.
 
-        :return: potential wtw intake (g) and energy intake (kJ)
+        :return: potential wtw intake (g) and energy intake (kJ) per time step
         """
 
         # calculate capture rate
@@ -288,7 +286,7 @@ class OystercatcherModel(Model):
         """
         Calculates final potential intake on mussel patches (interference thus excluded) for one time step.
 
-        :return: potential wtw intake (g) and energy intake (kJ)
+        :return: potential wtw intake (g/time step) and energy intake (kJ/time step)
         """
 
         # calculate capture rate
@@ -302,7 +300,7 @@ class OystercatcherModel(Model):
                            + capture_rate_kok2 * self.cockle_wet_weight[:, 1] \
                            + capture_rate_kokmj * self.cockle_wet_weight[:, 2] \
                            + capture_rate_mac * self.macoma_wet_weight
-        patch_wet_intake *= (1 - self.LeftOverShellfish)
+        patch_wet_intake *= (1 - self.LeftOverShellfish) #todo check dit
 
         # convert to intake rate of one time step
         conversion_s_to_timestep = self.resolution_min * 60  # todo: dubbel

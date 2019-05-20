@@ -70,22 +70,26 @@ class Bird:
 
                 # interference intake reduction
                 density_of_competitors = (self.model.num_agents_on_patches[self.pos] - 1)\
-                                         / self.model.available_areas[self.pos]
+                                         / self.model.available_areas[self.pos] #todo: density in model berekenen?
                 relative_uptake = self.interference_stillman_float(density_of_competitors, self.dominance)
 
                 # potential intake rate (J/s)
                 potential_energy_intake_rate = self.model.mussel_potential_energy_intake * relative_uptake \
                                                / (self.model.resolution_min * 60) #todo: dit mss al in model berekenen?
             elif self.model.patch_types[self.pos] == "Mudflat":
-                pass
+
+                # calculate potential intake rate (J/s)
+                wtw_intake, energy_intake = self.consume_mudflats_diet()
+                potential_energy_intake_rate = energy_intake / (self.model.resolution_min * 60)
+
             elif self.model.patch_types[self.pos] == "Grassland":
                 pass
 
             # if IR < threshold, move to other patch
-            if potential_energy_intake_rate * relative_uptake < self.model.leaving_threshold:
+            if potential_energy_intake_rate < self.model.leaving_threshold:
                  # move agent
-                pass
-                 #self.move()
+                 print("Potential E intake too low")
+                 self.move()
 
             # only forage if patch is available
             if self.model.available_areas[self.pos] > 0:
@@ -98,12 +102,12 @@ class Bird:
                     # #     self.model)
                     local_dominance = self.dominance # todo: check if this is truly correct
 
-                    # calculate competitor density
+                    # calculate competitor density todo: dit is wss niet meer nodig door move()
                     num_agents_on_patch = self.model.num_agents_on_patches[self.pos]
                     density_of_competitors = (num_agents_on_patch - 1)/ self.model.available_areas[
                         self.pos]
 
-                    # calculate intake
+                    # calculate intake todo: dit is wss niet meer nodig door move ()
                     wtw_intake, energy_intake = self.consume_mussel_diet(density_of_competitors, local_dominance)
 
                     # update stomach content (add wet weight)
@@ -114,7 +118,8 @@ class Bird:
 
                 # intake rate mudflat
                 elif self.model.patch_types[self.pos] == "Mudflat":
-                    # wtw_intake, energy_intake = self.consume_mudflats_diet()
+
+                    # wtw_intake, energy_intake = self.consume_mudflats_diet() # todo: density is hier al bekend
 
                     # update stomach content (add wet weight)
                     self.stomach_content += wtw_intake
@@ -125,7 +130,7 @@ class Bird:
                 # intake rate grasslands
                 elif self.model.patch_types[self.pos] == "Grassland":
 
-                    # intake rate becomes zero at low temperatures
+                    # intake rate becomes zero at low temperatures # todo: hier nacht invoegen
                     if self.model.temperature < 0:
                         wtw_intake, energy_intake = [0, 0]
                     else:
@@ -175,13 +180,37 @@ class Bird:
         :return:
         """
 
-        # calculate intake rate on mudflats without interference
+        # list with possible patch indices
+        possible_positions = []
 
-        # calculate relative intake rate on mudflats
+        # calculate bird density on all patches
+        all_patch_densities = self.model.num_agents_on_patches / self.model.available_areas
 
-        # if specialist is shellfish, also calculate IR on beds
+        # calculate intake rate on mudflats without interference (for both diet specialists)
+        # todo: alleen patches boven ir berekenen? zo nee, dan is deze IR niet nodig
+        # IR_mudflats_no_interf = self.model.mudflats_potential_energy_intake / (self.model.resolution_min * 60)
 
-            # calculate relative IR for mussel beds
+        # calculate relative intake rate for cockles on mudflats (based on densities)
+        relative_cockle_intake = self.calculate_cockle_relative_intake(all_patch_densities, 1, 1) #todo: haal onnodige variabelen weg
+
+        # turn capture rate from time step-1 to seconds-1 todo: in model misschien al doen?
+        capture_rate_mudflats_second = np.array(self.model.capture_rates_mudflats) / (self.model.resolution_min * 60)
+
+        # multiply capture rate for cockles with relative cockle intake
+        capture_rate_mudflats_second[]
+
+        # get patches with sufficient IR
+
+
+        # if specialist is shellfish, also calculate IR on beds.
+        if self.specialist == "shellfish":
+            pass
+
+            # get indices of mussel beds
+
+            # calculate relative IR for all mussel beds
+
+            # calculate final IR on all mussel beds
 
         # check if there are patches with IR > threshold
 
@@ -345,7 +374,7 @@ class Bird:
 
         In this method the depletion of prey on a patch is also implemented.
 
-        :return: The amount of wet weight foraged is returned (in g).
+        :return: The amount of wet weight foraged is returned (in g / time step).
         """
 
         # for cockles, calculate uptake reduction
@@ -365,13 +394,13 @@ class Bird:
             = total_captured_kok1[self.pos] * relative_intake, \
               total_captured_kok2[self.pos] * relative_intake, \
               total_captured_kokmj[self.pos] * relative_intake, \
-              total_captured_mac[self.pos] * relative_intake
+              total_captured_mac[self.pos]
 
-        # wet weight intake
-        patch_wtw_intake = self.model.mudflats_potential_wtw_intake[self.pos] * relative_intake
+        # wet weight intake todo: doe dit met capture rates en niet uit model dingen
+        patch_wtw_intake = self.model.mudflats_potential_wtw_intake[self.pos] * relative_intake # todo: relative intake klopt niet
 
         # calculate possible intake based on stomach left and digestive rate
-        possible_wtw_intake = self.calculate_possible_intake()  # g / 10 minutes
+        possible_wtw_intake = self.calculate_possible_intake()  # g / time step
 
         # intake is minimum of possible intake and intake achievable on patch
         intake_wtw = min(patch_wtw_intake, possible_wtw_intake)   # WtW intake in g
@@ -465,11 +494,16 @@ class Bird:
         possible_wtw_intake = self.max_digestive_rate + stomach_left  # g / 10 minutes
         return possible_wtw_intake
 
-    @staticmethod
+    @staticmethod #todo: haal onnodige parameters weg
     def calculate_cockle_relative_intake(bird_density, attack_distance, alpha):
         """ Method that calculates the uptake reduction for the cockle intake rate due to the
         presence of competitors
         """
+
+        # parameters
+        attack_distance = 2.0  # webtics, stillman 2002
+        alpha = 0.4  # fitted parameter by webtics
+
         exponent = -np.pi * bird_density * (attack_distance ** 2) * alpha
         relative_intake = np.exp(exponent)
         return relative_intake
