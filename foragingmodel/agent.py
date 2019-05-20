@@ -197,7 +197,7 @@ class Bird:
         capture_rate_mudflats_second = np.array(self.model.capture_rates_mudflats) / (self.model.resolution_min * 60)
 
         # multiply capture rate for cockles with relative cockle intake
-        capture_rate_mudflats_second[]
+        # capture_rate_mudflats_second[]
 
         # get patches with sufficient IR
 
@@ -383,6 +383,8 @@ class Bird:
         # parameters
         attack_distance = 2.0  # webtics, stillman 2002
         alpha = 0.4  # fitted parameter by webtics
+
+        # individual relative intake (fraction)
         relative_intake = self.calculate_cockle_relative_intake(bird_density, attack_distance, alpha)
 
         # get the capture rate of all prey on mudflat (different cockle sizes)
@@ -396,8 +398,14 @@ class Bird:
               total_captured_kokmj[self.pos] * relative_intake, \
               total_captured_mac[self.pos]
 
-        # wet weight intake todo: doe dit met capture rates en niet uit model dingen
-        patch_wtw_intake = self.model.mudflats_potential_wtw_intake[self.pos] * relative_intake # todo: relative intake klopt niet
+        # wet weight intake, note that we should use capture rate including interference (and not global wtw intake)
+        # patch_wtw_intake = self.model.mudflats_potential_wtw_intake[self.pos] * relative_intake #
+        # wet weight intake rate (g/s)
+        patch_wtw_intake = total_captured_kok1 * self.model.cockle_wet_weight[self.pos][0] \
+                             + total_captured_kok2 * self.model.cockle_wet_weight[self.pos][1]\
+                             + total_captured_kokmj * self.model.cockle_wet_weight[self.pos][2]\
+                             + total_captured_mac * self.model.macoma_wet_weight[self.pos]
+        patch_wtw_intake *= (1 - self.model.LeftOverShellfish)
 
         # calculate possible intake based on stomach left and digestive rate
         possible_wtw_intake = self.calculate_possible_intake()  # g / time step

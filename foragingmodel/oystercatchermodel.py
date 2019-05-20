@@ -127,7 +127,7 @@ class OystercatcherModel(Model):
         for i in range(self.init_birds):
 
             # give random initial position #todo: should be according to ideal distribution
-            pos = 3 # todo: maak dit anders. Zorg ervoor dat er duidelijker onderscheid is tussen mossel/mudflats
+            pos = 2 # todo: maak dit anders. Zorg ervoor dat er duidelijker onderscheid is tussen mossel/mudflats
             # todo: wat wordt de initial distribution voor de vogels -> Waarschijnlijk random
 
             # give agent individual properties
