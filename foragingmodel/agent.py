@@ -199,6 +199,8 @@ class Bird:
         # multiply capture rate for cockles with relative cockle intake
         # capture_rate_mudflats_second[]
 
+        # turn capture rate into kJ/s rate with prey weight and energy content
+
         # get patches with sufficient IR
 
 
