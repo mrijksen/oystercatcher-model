@@ -2,17 +2,29 @@
 
 
 
-##### Initialisation parameters #####
+# -------------------------- Initialisation parameters ------------------------------------ #
 
-init_birds = 1
+init_birds = 1 # number of birds on September, 1
+# include distributions for bird initialisation here as well 
+
+resolution_min = 30 # time step size in minutes
+
+# IR at which 623g bird with mean effic needs 12 hours of foraging 
+leaving_threshold = 0.02045685 # kJ/s
 
 
-##### Prey Characteristics #####
+# ----------------------------------- Prey Characteristics -------------------------------- #
 
-AFDWenergyContent = 22.5 # kJ / gram	ZwartEnsDurellEtAl1996
-RatioAFDWtoWet = 0.16 # afdw per g wtw	ZwartEnsDurellEtAl1996
+AFDWenergyContent = 22.5 	# kJ / gram	ZwartEnsDurellEtAl1996
+RatioAFDWtoWet = 0.16 		# afdw per g wtw	ZwartEnsDurellEtAl1996
 
 # conversion cockle FW to size
 CockFWtoSizeA = 14.610 # Ens
 CockFWtoSizeB = 0.317766
+
+
+# ----------------------- Food digestion and assimilation parameters -----------------------#
+
+FractionTakenUp = 0.85	# Speakman1987,KerstenVisser1996,KerstenPiersma1987,ZwartsBlomert1996
+LeftOverShellfish = 0.1 # ZwartEnsKerstenetal1996
 

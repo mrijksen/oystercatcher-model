@@ -31,7 +31,7 @@ class OystercatcherModel(Model):
 
         # set parameters #todo: zet in param file
         self.init_birds = params["init_birds"]
-        self.resolution_min = 30 # time step size # todo: calculate with input data
+        self.resolution_min = params["resolution_min"] # time step size # todo: calculate with input data
 
         # prey characteristics
         self.AFDWenergyContent = params["AFDWenergyContent"] # kJ/gram
@@ -39,11 +39,11 @@ class OystercatcherModel(Model):
         self.CockFWtoSizeA = params["CockFWtoSizeA"] # Ens, Webtics, L = a FW ^ b(mm = a gram ^b)
         self.CockFWtoSizeB = params["CockFWtoSizeB"]
 
-        self.FractionTakenUp = 0.85  # Speakman1987, KerstenVisser1996, KerstenPiersma1987, ZwartsBlomert1996
-        self.LeftOverShellfish = 0.1  # ZwartEnsKerstenetal1996
+        self.FractionTakenUp = params["FractionTakenUp"]  # Speakman1987, KerstenVisser1996, KerstenPiersma1987, ZwartsBlomert1996
+        self.LeftOverShellfish = params["LeftOverShellfish"]  # ZwartEnsKerstenetal1996
 
         # threshold to leave patch
-        self.leaving_threshold = 20.45685 / 1000 # IR at which 623g bird with mean effic needs 12 hours of foraging kJ/s
+        self.leaving_threshold = params["leaving_threshold"]
 
         # calculate number of time steps in total
         self.num_steps = df_env.shape[0]
