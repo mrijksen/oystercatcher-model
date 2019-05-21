@@ -58,6 +58,7 @@ class OystercatcherModel(Model):
         self.patch_indices_mudflats = np.where(self.patch_types == "Mudflat")
         self.patch_indices_beds = np.where(self.patch_types == "Bed")
         self.patch_max_bed_index = np.max(self.patch_indices_beds)
+        self.patch_index_grassland = np.where(self.patch_types == "Grassland")[0]
 
 
         # cockle data todo: dit moet geupdate worden elke tidal
@@ -77,9 +78,9 @@ class OystercatcherModel(Model):
         self.handling_time_macoma = self.calculate_handling_time_macoma()  # does not change during simulation
 
         # mussel data
-        self.mussel_density = 99999 # infinitely rich mussel patches
-        self.mussel_wtw_gain = -0.0025 / (24 / (self.resolution_min / 60))  # wtw gain per time step, GossCustard2001
-        self.mussel_afdw = 0.850  # g AFDW GossCustard2001 # todo: dit moet veranderen
+        self.mussel_density = params["mussel_density"] # infinitely rich mussel patches
+        self.mussel_wtw_gain = params["mussel_wtw_gain"] / (24 / (self.resolution_min / 60))  # wtw gain per time step
+        self.mussel_afdw = params["mussel_afdw"]  # g AFDW GossCustard2001 # todo: dit moet veranderen
         self.mussel_wet_weight = self.mussel_afdw / self.RatioAFDWtoWet  # g WtW calculated with conversion factor
         # self.mussel_intake_rates =
 
@@ -129,7 +130,7 @@ class OystercatcherModel(Model):
         for i in range(self.init_birds):
 
             # give random initial position #todo: should be according to ideal distribution
-            pos = 2 # todo: maak dit anders. Zorg ervoor dat er duidelijker onderscheid is tussen mossel/mudflats
+            pos = 1 # todo: maak dit anders. Zorg ervoor dat er duidelijker onderscheid is tussen mossel/mudflats
             # todo: wat wordt de initial distribution voor de vogels -> Waarschijnlijk random
 
             # give agent individual properties

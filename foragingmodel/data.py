@@ -68,9 +68,9 @@ def get_artificial_patch_data():
     artificial_patches['area'] = [10000, 10000, 10000, 1000]
     artificial_patches['musselcover'] = [100, np.nan, np.nan, 50]
     artificial_patches['Cockle_1j_dens'] = [np.nan, 0, np.nan, 0]
-    artificial_patches['Cockle_2j_dens'] = [np.nan, 0, np.nan, 20]
-    artificial_patches['Cockle_mj_dens'] = [np.nan, 0, np.nan, 200]
-    artificial_patches['Macoma_dens'] = [np.nan, 50, np.nan, 0]
+    artificial_patches['Cockle_2j_dens'] = [np.nan, 0, np.nan, 0]
+    artificial_patches['Cockle_mj_dens'] = [np.nan, 0, np.nan, 0]
+    artificial_patches['Macoma_dens'] = [np.nan, 0, np.nan, 0]
     artificial_patches['Cockle_1j_FW'] = [0, 5, np.nan, 5]
     artificial_patches['Cockle_2j_FW'] = [0, 5, np.nan, 5]
     artificial_patches['Cockle_mj_FW'] = [0, 10, np.nan, 5]
@@ -145,7 +145,7 @@ def get_part_of_environmental_data():
 
     # location of environmental data todo: dit ook in data.py zetten? en alleen startjaar meegevem?
     env_data_dir = 'C:/Users/Marleen/Documents/thesis project/oystercatcher-model/Input data/'
-    env_data_filename = '2017_9_1_to_2017_9_10.pkl'
+    env_data_filename = '2017_9_1_to_2018_3_1.pkl'
     env_data_path = env_data_dir + env_data_filename
     df_env = pd.read_pickle(env_data_path)
     return df_env

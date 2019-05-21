@@ -15,7 +15,7 @@ class Bird:
         # this should be read from data file
         self.dominance = dominance
         self.pos = pos
-        self.specialist = 'shellfish'
+        self.specialist = 'worm'
         self.start_foraging = None # number of steps after high tide
         self.time_foraged = 6 #todo: welke initialisatie waarde ? let op tijdstap
 
@@ -92,13 +92,12 @@ class Bird:
                                                (self.model.resolution_min * 60)
 
             elif self.model.patch_types[self.pos] == "Grassland":
-                potential_energy_intake_rate = 0 # todo: niet netjes zo
+                potential_energy_intake_rate = 0 # todo: niet netjes zo, zet hier echte grass ir in
 
             # if IR < threshold, move to other patch
             if potential_energy_intake_rate < self.model.leaving_threshold:
-                 # move agent
-                 print("Potential E intake too low")
-                 self.move()
+                # print("Agent moves due to low potential E intake", potential_energy_intake_rate)
+                self.move()
 
             # only forage if patch is available
             if self.model.available_areas[self.pos] > 0:
@@ -210,7 +209,7 @@ class Bird:
         total_patch_energy_intake = energy_intake_cockle_sec + energy_intake_mac_sec
 
         # get indices of patches with IR that is large enough
-        possible_positions = np.where(total_patch_energy_intake > self.model.leaving_threshold)[0]
+        possible_positions = np.where(total_patch_energy_intake > self.model.leaving_threshold)[0] # todo: invalid value encountered in greater
 
         # if specialist is shellfish, also calculate IR on beds.
         if self.specialist == "shellfish":
@@ -229,14 +228,23 @@ class Bird:
             possible_positions_beds = np.where(final_mussel_intake > self.model.leaving_threshold)[0]
             possible_positions = np.concatenate([possible_positions, possible_positions_beds])
 
-        print(possible_positions)
-
-        # check if there is a possible patch
-
         # if there is no possible patch, stop foraging or move to grassland depending on diet
+        if not len(possible_positions):
+            if self.specialist == "worm":
+                self.model.num_agents_on_patches[self.pos] -= 1
+                self.pos = self.model.patch_index_grassland
+                self.model.num_agents_on_patches[self.pos] += 1
+            else:
+                # todo: move to roost?
+                pass
 
-        # if there is a possible patch, choose a random new patch and update num_agents_on_patch
-
+        # if there is a possible patch, choose a random new patch
+        else:
+            # print("old position", self.pos)
+            self.model.num_agents_on_patches[self.pos] -= 1
+            self.pos = np.random.choice(possible_positions)
+            self.model.num_agents_on_patches[self.pos] += 1
+            # print("new position", self.pos)
 
     @staticmethod
     def interference_stillman_float(density_competitors, local_dominance):
