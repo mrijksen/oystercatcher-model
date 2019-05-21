@@ -73,17 +73,26 @@ class Bird:
                                          / self.model.available_areas[self.pos] #todo: density in model berekenen?
                 relative_uptake = self.interference_stillman_float(density_of_competitors, self.dominance)
 
-                # potential intake rate (J/s)
+                # potential intake rate (kJ/s)
                 potential_energy_intake_rate = self.model.mussel_potential_energy_intake * relative_uptake \
                                                / (self.model.resolution_min * 60) #todo: dit mss al in model berekenen?
             elif self.model.patch_types[self.pos] == "Mudflat":
 
-                # calculate potential intake rate (J/s)
-                wtw_intake, energy_intake = self.consume_mudflats_diet()
-                potential_energy_intake_rate = energy_intake / (self.model.resolution_min * 60)
+                # interference intake reduction
+                density_of_competitors = (self.model.num_agents_on_patches[self.pos] - 1) \
+                                         / self.model.available_areas[self.pos]
+                relative_uptake = self.calculate_cockle_relative_intake(density_of_competitors, 1, 1)
+
+                # energy intake on all patches for cockle and macoma per second todo: hier misschien functie van?
+                energy_intake_cockle= self.model.energy_intake_cockle[self.pos] * relative_uptake
+                energy_intake_mac = self.model.energy_intake_mac[self.pos]
+
+                # get total energy intake per second per patch (kJ/s)
+                potential_energy_intake_rate = (energy_intake_cockle + energy_intake_mac) / \
+                                               (self.model.resolution_min * 60)
 
             elif self.model.patch_types[self.pos] == "Grassland":
-                pass
+                potential_energy_intake_rate = 0 # todo: niet netjes zo
 
             # if IR < threshold, move to other patch
             if potential_energy_intake_rate < self.model.leaving_threshold:
@@ -119,7 +128,7 @@ class Bird:
                 # intake rate mudflat
                 elif self.model.patch_types[self.pos] == "Mudflat":
 
-                    # wtw_intake, energy_intake = self.consume_mudflats_diet() # todo: density is hier al bekend
+                    wtw_intake, energy_intake = self.consume_mudflats_diet() # todo: density is hier al bekend
 
                     # update stomach content (add wet weight)
                     self.stomach_content += wtw_intake
@@ -180,9 +189,6 @@ class Bird:
         :return:
         """
 
-        # list with possible patch indices
-        possible_positions = []
-
         # calculate bird density on all patches
         all_patch_densities = self.model.num_agents_on_patches / self.model.available_areas
 
@@ -190,37 +196,47 @@ class Bird:
         # todo: alleen patches boven ir berekenen? zo nee, dan is deze IR niet nodig
         # IR_mudflats_no_interf = self.model.mudflats_potential_energy_intake / (self.model.resolution_min * 60)
 
+        ## todo: dit gedeelte is nu een beetje dubbel met het deel waarbij de agent op eigen patch kijkt wat de IR is
+
         # calculate relative intake rate for cockles on mudflats (based on densities)
         relative_cockle_intake = self.calculate_cockle_relative_intake(all_patch_densities, 1, 1) #todo: haal onnodige variabelen weg
 
-        # turn capture rate from time step-1 to seconds-1 todo: in model misschien al doen?
-        capture_rate_mudflats_second = np.array(self.model.capture_rates_mudflats) / (self.model.resolution_min * 60)
+        # energy intake on all patches for cockle and macoma per second
+        energy_intake_cockle_sec = (self.model.energy_intake_cockle * relative_cockle_intake) / \
+                                   (self.model.resolution_min * 60)
+        energy_intake_mac_sec = self.model.energy_intake_mac / (self.model.resolution_min * 60)
 
-        # multiply capture rate for cockles with relative cockle intake
-        # capture_rate_mudflats_second[]
+        # get total energy intake per second per patch
+        total_patch_energy_intake = energy_intake_cockle_sec + energy_intake_mac_sec
 
-        # turn capture rate into kJ/s rate with prey weight and energy content
-
-        # get patches with sufficient IR
-
+        # get indices of patches with IR that is large enough
+        possible_positions = np.where(total_patch_energy_intake > self.model.leaving_threshold)[0]
 
         # if specialist is shellfish, also calculate IR on beds.
         if self.specialist == "shellfish":
-            pass
 
-            # get indices of mussel beds
+            # density of competitors on mussel patches
+            density_competitors_bed = all_patch_densities[: self.model.patch_max_bed_index + 1] # todo: mussel patches moeten dus bovenaan!
 
             # calculate relative IR for all mussel beds
+            relative_mussel_intake = self.interference_stillman_array(density_competitors_bed, self.dominance)
 
-            # calculate final IR on all mussel beds
+            # calculate final IR on all mussel beds in kJ/s
+            final_mussel_intake = relative_mussel_intake * self.model.mussel_potential_energy_intake / \
+                                  (self.model.resolution_min * 60)
 
-        # check if there are patches with IR > threshold
+            # get all possible indices and select mussel patches from that
+            possible_positions_beds = np.where(final_mussel_intake > self.model.leaving_threshold)[0]
+            possible_positions = np.concatenate([possible_positions, possible_positions_beds])
 
-        # if no patch is available, stop foraging or move to grassland
+        print(possible_positions)
 
-        # choose (random) new patch
+        # check if there is a possible patch
 
-        # important: update num_agents_on_patch
+        # if there is no possible patch, stop foraging or move to grassland depending on diet
+
+        # if there is a possible patch, choose a random new patch and update num_agents_on_patch
+
 
     @staticmethod
     def interference_stillman_float(density_competitors, local_dominance):
@@ -376,7 +392,8 @@ class Bird:
 
         In this method the depletion of prey on a patch is also implemented.
 
-        :return: The amount of wet weight foraged is returned (in g / time step).
+        :return: The amount of wet weight foraged is returned (in g / time step). The energy
+        is also returned in kJ/time step.
         """
 
         # for cockles, calculate uptake reduction
@@ -514,7 +531,7 @@ class Bird:
         attack_distance = 2.0  # webtics, stillman 2002
         alpha = 0.4  # fitted parameter by webtics
 
-        exponent = -np.pi * bird_density * (attack_distance ** 2) * alpha
+        exponent = -np.pi * bird_density * (attack_distance ** 2) * alpha #todo: moet hier density -1?
         relative_intake = np.exp(exponent)
         return relative_intake
 

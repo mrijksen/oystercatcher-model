@@ -57,6 +57,8 @@ class OystercatcherModel(Model):
         # patches for shellfish/wormspecialists
         self.patch_indices_mudflats = np.where(self.patch_types == "Mudflat")
         self.patch_indices_beds = np.where(self.patch_types == "Bed")
+        self.patch_max_bed_index = np.max(self.patch_indices_beds)
+
 
         # cockle data todo: dit moet geupdate worden elke tidal
         self.cockle_fresh_weight = df_patch_data[['Cockle_1j_FW',
@@ -75,7 +77,7 @@ class OystercatcherModel(Model):
         self.handling_time_macoma = self.calculate_handling_time_macoma()  # does not change during simulation
 
         # mussel data
-        self.mussel_density = 1 # infinitely rich mussel patches
+        self.mussel_density = 99999 # infinitely rich mussel patches
         self.mussel_wtw_gain = -0.0025 / (24 / (self.resolution_min / 60))  # wtw gain per time step, GossCustard2001
         self.mussel_afdw = 0.850  # g AFDW GossCustard2001 # todo: dit moet veranderen
         self.mussel_wet_weight = self.mussel_afdw / self.RatioAFDWtoWet  # g WtW calculated with conversion factor
@@ -119,8 +121,8 @@ class OystercatcherModel(Model):
 
         # intake rate variables
         self.mussel_potential_wtw_intake, self.mussel_potential_energy_intake = [None, None]
-        self.mudflats_potential_wtw_intake, self.mudflats_potential_energy_intake, self.capture_rates_mudflats \
-            = [None, None, None]
+        self.mudflats_potential_wtw_intake, self.mudflats_potential_energy_intake, self.energy_intake_cockle, \
+        self.energy_intake_mac, self.capture_rates_mudflats = [None, None, None, None, None]
         self.grassland_potential_wtw_intake, self.grassland_potential_energy_intake = [None, None]
 
         # create birds todo: gebruik hier de verdeling van HK voor de vogels, en maak een lijst met alle vogels
@@ -185,7 +187,8 @@ class OystercatcherModel(Model):
         self.mussel_potential_wtw_intake, self.mussel_potential_energy_intake = self.mussel_potential_intake()
 
         # calculate intake rate for mudflats (without interference)
-        self.mudflats_potential_wtw_intake, self.mudflats_potential_energy_intake, self.capture_rates_mudflats \
+        self.mudflats_potential_wtw_intake, self.mudflats_potential_energy_intake, self.energy_intake_cockle, \
+        self.energy_intake_mac, self.capture_rates_mudflats \
             = self.mudflats_potential_intake()
 
         # calculate intake on grassland
@@ -296,18 +299,25 @@ class OystercatcherModel(Model):
                                                 self.proportion_macoma)
 
         # wet weight intake rate (g/s)
-        patch_wet_intake = capture_rate_kok1 * self.cockle_wet_weight[:, 0] \
+        patch_wet_intake_cockle_sec = (capture_rate_kok1 * self.cockle_wet_weight[:, 0] \
                            + capture_rate_kok2 * self.cockle_wet_weight[:, 1] \
-                           + capture_rate_kokmj * self.cockle_wet_weight[:, 2] \
-                           + capture_rate_mac * self.macoma_wet_weight
-        patch_wet_intake *= (1 - self.LeftOverShellfish) #todo check dit
+                           + capture_rate_kokmj * self.cockle_wet_weight[:, 2]) * (1 - self.LeftOverShellfish) #todo check dit
+        patch_wet_intake_mac_sec = (capture_rate_mac * self.macoma_wet_weight) * (1 - self.LeftOverShellfish)
 
         # convert to intake rate of one time step
         conversion_s_to_timestep = self.resolution_min * 60  # todo: dubbel
-        total_intake_wtw = patch_wet_intake * conversion_s_to_timestep
+        total_intake_wtw = (patch_wet_intake_cockle_sec + patch_wet_intake_mac_sec) * conversion_s_to_timestep
 
-        # calculate potential energy intake
+        # for cockle and macoma only
+        total_intake_wtw_cockle = patch_wet_intake_cockle_sec * conversion_s_to_timestep
+        total_intake_wtw_mac = patch_wet_intake_mac_sec * conversion_s_to_timestep
+
+        # calculate potential energy intake excluding interference
         energy_intake = total_intake_wtw * self.FractionTakenUp * self.RatioAFDWtoWet \
+                        * self.AFDWenergyContent
+        energy_intake_cockle = total_intake_wtw_cockle * self.FractionTakenUp * self.RatioAFDWtoWet \
+                        * self.AFDWenergyContent
+        energy_intake_mac = total_intake_wtw_mac * self.FractionTakenUp * self.RatioAFDWtoWet \
                         * self.AFDWenergyContent
 
         # calculate total captured prey in one time step
@@ -315,7 +325,7 @@ class OystercatcherModel(Model):
                                capture_rate_kok2 * conversion_s_to_timestep,
                                capture_rate_kokmj * conversion_s_to_timestep,
                                capture_rate_mac * conversion_s_to_timestep]
-        return total_intake_wtw, energy_intake, total_captured_prey
+        return total_intake_wtw, energy_intake, energy_intake_cockle, energy_intake_mac, total_captured_prey
 
     @staticmethod
     def functional_response_mudflats(handling_time_cockles, cockle_densities, handling_time_mac, mac_density,

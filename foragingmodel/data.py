@@ -67,18 +67,18 @@ def get_artificial_patch_data():
     artificial_patches['type'] = ['Bed', "Mudflat", "Grassland", "Mudflat"]
     artificial_patches['area'] = [10000, 10000, 10000, 1000]
     artificial_patches['musselcover'] = [100, np.nan, np.nan, 50]
-    artificial_patches['Cockle_1j_dens'] = [np.nan, 1500, np.nan, 0]
-    artificial_patches['Cockle_2j_dens'] = [np.nan, 1500, np.nan, 0]
-    artificial_patches['Cockle_mj_dens'] = [np.nan, 5000, np.nan, 0]
+    artificial_patches['Cockle_1j_dens'] = [np.nan, 0, np.nan, 0]
+    artificial_patches['Cockle_2j_dens'] = [np.nan, 0, np.nan, 20]
+    artificial_patches['Cockle_mj_dens'] = [np.nan, 0, np.nan, 200]
     artificial_patches['Macoma_dens'] = [np.nan, 50, np.nan, 0]
     artificial_patches['Cockle_1j_FW'] = [0, 5, np.nan, 5]
     artificial_patches['Cockle_2j_FW'] = [0, 5, np.nan, 5]
-    artificial_patches['Cockle_mj_FW'] = [0, 0, np.nan, 5]
+    artificial_patches['Cockle_mj_FW'] = [0, 10, np.nan, 5]
     artificial_patches['Cockle_1j_WW'] = [0, 1, np.nan, 1]
     artificial_patches['Cockle_2j_WW'] = [0, 1, np.nan, 1]
     artificial_patches['Cockle_mj_WW'] = [0, 5, np.nan, 5]
     artificial_patches['Macoma_WW'] = [0, 0.1, np.nan, 0.1]
-    artificial_patches['Macoma_dens'] = [0, 10, np.nan, 0]
+    # artificial_patches['Macoma_dens'] = [0, 10, np.nan, 0]
 
     # sort and set index to patchID
     df_patches = artificial_patches.sort_values('type')
