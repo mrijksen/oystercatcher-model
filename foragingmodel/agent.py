@@ -1,12 +1,12 @@
 import numpy as np
-
+import random
 
 class Bird:
     """
     Instantiations represent foraging oystercatchers
     """
 
-    def __init__(self, unique_id, pos, model, dominance):
+    def __init__(self, unique_id, pos, model, dominance, specialization):
 
         # standard params
         self.unique_id = unique_id
@@ -15,9 +15,9 @@ class Bird:
         # this should be read from data file
         self.dominance = dominance
         self.pos = pos
-        self.specialist = 'worm'
+        self.specialization = specialization
         self.start_foraging = None # number of steps after high tide
-        self.time_foraged = 6 #todo: welke initialisatie waarde ? let op tijdstap
+        self.time_foraged = 6 #todo: welke initialisatie waarde ? let op tijdstap (dit is niet in uur)
 
         # stomach, weight, energy goal
         self.stomach_content = 0 # g todo: waarmee initialiseren?
@@ -59,7 +59,7 @@ class Bird:
             self.start_foraging = int(self.model.steps_to_low_tide - (self.time_foraged / 2))
             self.start_foraging_list.append(self.start_foraging)
 
-            # keep track of time foraged within coming cycle
+            # keep track of time foraged in coming cycle
             self.time_foraged = 0
 
         # moving and foraging
@@ -83,8 +83,8 @@ class Bird:
                                          / self.model.available_areas[self.pos]
                 relative_uptake = self.calculate_cockle_relative_intake(density_of_competitors, 1, 1)
 
-                # energy intake on all patches for cockle and macoma per second todo: hier misschien functie van?
-                energy_intake_cockle= self.model.energy_intake_cockle[self.pos] * relative_uptake
+                # energy intake current patch for cockle and macoma (kJ/s) todo: hier misschien functie van?
+                energy_intake_cockle = self.model.energy_intake_cockle[self.pos] * relative_uptake
                 energy_intake_mac = self.model.energy_intake_mac[self.pos]
 
                 # get total energy intake per second per patch (kJ/s)
@@ -100,15 +100,10 @@ class Bird:
                 self.move()
 
             # only forage if patch is available
-            if self.model.available_areas[self.pos] > 0:
+            if self.model.available_areas[self.pos] > 0: #todo: dit moeten we dus verwerken in potential energy al!
 
                 # intake rate mussel bed
                 if self.model.patch_types[self.pos] == "Bed":
-
-                    # # num of other agents and calculate local dominance
-                    # # num_agents_on_patch, local_dominance = self.calculate_local_dominance(
-                    # #     self.model)
-                    local_dominance = self.dominance # todo: check if this is truly correct
 
                     # calculate competitor density todo: dit is wss niet meer nodig door move()
                     num_agents_on_patch = self.model.num_agents_on_patches[self.pos]
@@ -116,7 +111,7 @@ class Bird:
                         self.pos]
 
                     # calculate intake todo: dit is wss niet meer nodig door move ()
-                    wtw_intake, energy_intake = self.consume_mussel_diet(density_of_competitors, local_dominance)
+                    wtw_intake, energy_intake = self.consume_mussel_diet(density_of_competitors, self.dominance)
 
                     # update stomach content (add wet weight)
                     self.stomach_content += wtw_intake
@@ -189,7 +184,7 @@ class Bird:
         """
 
         # calculate bird density on all patches
-        all_patch_densities = self.model.num_agents_on_patches / self.model.available_areas
+        all_patch_densities = self.model.num_agents_on_patches / self.model.available_areas # todo moet hier geen -1 op plek agent?
 
         # calculate intake rate on mudflats without interference (for both diet specialists)
         # todo: alleen patches boven ir berekenen? zo nee, dan is deze IR niet nodig
@@ -212,7 +207,7 @@ class Bird:
         possible_positions = np.where(total_patch_energy_intake > self.model.leaving_threshold)[0] # todo: invalid value encountered in greater
 
         # if specialist is shellfish, also calculate IR on beds.
-        if self.specialist == "shellfish":
+        if self.specialization == "shellfish":
 
             # density of competitors on mussel patches
             density_competitors_bed = all_patch_densities[: self.model.patch_max_bed_index + 1] # todo: mussel patches moeten dus bovenaan!
@@ -230,7 +225,7 @@ class Bird:
 
         # if there is no possible patch, stop foraging or move to grassland depending on diet
         if not len(possible_positions):
-            if self.specialist == "worm":
+            if self.specialization == "worm":
                 self.model.num_agents_on_patches[self.pos] -= 1
                 self.pos = self.model.patch_index_grassland
                 self.model.num_agents_on_patches[self.pos] += 1
@@ -242,7 +237,7 @@ class Bird:
         else:
             # print("old position", self.pos)
             self.model.num_agents_on_patches[self.pos] -= 1
-            self.pos = np.random.choice(possible_positions)
+            self.pos = random.choice(possible_positions)
             self.model.num_agents_on_patches[self.pos] += 1
             # print("new position", self.pos)
 
@@ -345,10 +340,9 @@ class Bird:
             weight_energy_requirement = self.BodyGramEnergyReq * weight_difference
         else:
             weight_energy_requirement = 0
-        energy_goal = weight_energy_requirement # todo: unnessesary variable just for clarity
 
         # calculate normal energy requirements
-        energy_goal += self.energy_requirements_one_time_step(mean_T) * num_steps_tidal_cycle
+        energy_goal = self.energy_requirements_one_time_step(mean_T) * num_steps_tidal_cycle + weight_energy_requirement
         return energy_goal
 
     def consume_mussel_diet(self, density_of_competitors, local_dominance):
@@ -526,7 +520,7 @@ class Bird:
         stomach_left = self.max_stomach_content - self.stomach_content  # g
 
         # calculate possible intake based on stomach left and digestive rate
-        possible_wtw_intake = self.max_digestive_rate + stomach_left  # g / 10 minutes
+        possible_wtw_intake = self.max_digestive_rate + stomach_left  # g / time step
         return possible_wtw_intake
 
     @staticmethod #todo: haal onnodige parameters weg

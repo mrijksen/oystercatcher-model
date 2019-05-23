@@ -65,20 +65,20 @@ def get_artificial_patch_data():
     artificial_patches = pd.DataFrame()
     artificial_patches['patchID'] = [1, 2, 3, 4]
     artificial_patches['type'] = ['Bed', "Mudflat", "Grassland", "Mudflat"]
-    artificial_patches['area'] = [10000, 10000, 10000, 1000]
-    artificial_patches['musselcover'] = [100, np.nan, np.nan, 50]
-    artificial_patches['Cockle_1j_dens'] = [np.nan, 0, np.nan, 0]
-    artificial_patches['Cockle_2j_dens'] = [np.nan, 0, np.nan, 0]
-    artificial_patches['Cockle_mj_dens'] = [np.nan, 0, np.nan, 0]
-    artificial_patches['Macoma_dens'] = [np.nan, 0, np.nan, 0]
-    artificial_patches['Cockle_1j_FW'] = [0, 5, np.nan, 5]
-    artificial_patches['Cockle_2j_FW'] = [0, 5, np.nan, 5]
-    artificial_patches['Cockle_mj_FW'] = [0, 10, np.nan, 5]
-    artificial_patches['Cockle_1j_WW'] = [0, 1, np.nan, 1]
-    artificial_patches['Cockle_2j_WW'] = [0, 1, np.nan, 1]
-    artificial_patches['Cockle_mj_WW'] = [0, 5, np.nan, 5]
-    artificial_patches['Macoma_WW'] = [0, 0.1, np.nan, 0.1]
-    # artificial_patches['Macoma_dens'] = [0, 10, np.nan, 0]
+    artificial_patches['area'] = [1000, 10000, 10000, 10000]
+    artificial_patches['musselcover'] = [100, 0, 0, 0]
+    artificial_patches['Cockle_1j_dens'] = [0, 0, 0, 90]
+    artificial_patches['Cockle_2j_dens'] = [0, 0, 0, 20]
+    artificial_patches['Cockle_mj_dens'] = [0, 0, 0, 40]
+    artificial_patches['Macoma_dens'] = [0, 0, 0, 30]
+    artificial_patches['Cockle_1j_FW'] = [0, 5, 0, 5]
+    artificial_patches['Cockle_2j_FW'] = [0, 5, 0, 5]
+    artificial_patches['Cockle_mj_FW'] = [0, 10, 0, 5]
+    artificial_patches['Cockle_1j_WW'] = [0, 1, 0, 1]
+    artificial_patches['Cockle_2j_WW'] = [0, 1, 0, 1]
+    artificial_patches['Cockle_mj_WW'] = [0, 5, 0, 5]
+    artificial_patches['Macoma_WW'] = [0, 0.1, 0, 0.1]
+    # artificial_patches['Macoma_dens'] = [0, 10, 0, 0]
 
     # sort and set index to patchID
     df_patches = artificial_patches.sort_values('type')
@@ -129,11 +129,11 @@ def get_artificial_patch_availability():
     # make patches available if waterheight < 0
     artificial_availability = pd.DataFrame()
     artificial_availability['waterheight'] = np.arange(-300, 300, 1)
-    # artificial_availability['1'] = np.nan
-    artificial_availability['1'] = np.where(artificial_availability.waterheight < 0, 1, 1)
-    artificial_availability['2'] = np.where(artificial_availability.waterheight < 0, 1, 1)
-    artificial_availability['3'] = 1
-    artificial_availability['4'] = np.where(artificial_availability.waterheight < 0, 1, 1)
+    # artificial_availability['1'] = 0
+    artificial_availability['1'] = np.where(artificial_availability.waterheight < 0, 1, 0)
+    artificial_availability['2'] = 1
+    artificial_availability['3'] = np.where(artificial_availability.waterheight < 20, 1, 0)
+    artificial_availability['4'] = np.where(artificial_availability.waterheight < 0, 1, 0)
 
     artificial_availability.set_index('waterheight', inplace=True)
     return artificial_availability

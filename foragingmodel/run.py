@@ -25,23 +25,14 @@ def initiate_model(start_year, run_type='real_data'):
 
     else:
 
-        # load patches data todo: hier moeten we dus de echte patch data gaan laden
-        patch_name_list = data.create_patch_list(params)
-        prey = data.create_random_prey(params, patch_name_list)
-
-        # area for all patches todo: hier dus de echte data
-        area_of_patches = data.get_random_area(params)
-
-        # load environmental data
-        df_env = data.get_environmental_data(start_year)
-
-        # load patch data todo
-        df_patch = None
+        # load artificial patch data
+        df_patch_data = data.get_artificial_patch_data()
 
         # load patch availability
         df_patch_availability = data.get_patch_availability(start_year)
 
-        df_patch_data = 1
+        # load environmental data
+        df_env = data.get_environmental_data(start_year)
 
 
     # instantiate model
@@ -110,6 +101,6 @@ if __name__ == "__main__":
     fig.subplots_adjust(top=0.88)
     plt.savefig('test')
 
-    print(np.mean(model.schedule.agents[0].foraging_time_per_cycle[:]), model.schedule.agents[0].dominance)
+    print(model.schedule.agents[0].pos)
 
     plt.show()

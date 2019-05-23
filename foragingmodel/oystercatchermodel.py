@@ -10,6 +10,7 @@ from model import Model
 
 from collections import defaultdict
 import numpy as np
+import random
 
 
 class OystercatcherModel(Model):
@@ -124,24 +125,25 @@ class OystercatcherModel(Model):
         self.mussel_potential_wtw_intake, self.mussel_potential_energy_intake = [None, None]
         self.mudflats_potential_wtw_intake, self.mudflats_potential_energy_intake, self.energy_intake_cockle, \
         self.energy_intake_mac, self.capture_rates_mudflats = [None, None, None, None, None]
-        self.grassland_potential_wtw_intake, self.grassland_potential_energy_intake = [None, None]
+        self.grassland_potential_wtw_intake, self.grassland_potential_energy_intake = self.grassland_potential_intake()
 
         # create birds todo: gebruik hier de verdeling van HK voor de vogels, en maak een lijst met alle vogels
         for i in range(self.init_birds):
 
             # give random initial position #todo: should be according to ideal distribution
-            pos = 1 # todo: maak dit anders. Zorg ervoor dat er duidelijker onderscheid is tussen mossel/mudflats
+            pos = 2 # todo: maak dit anders. Zorg ervoor dat er duidelijker onderscheid is tussen mossel/mudflats
             # todo: wat wordt de initial distribution voor de vogels -> Waarschijnlijk random
 
             # give agent individual properties
             unique_id = self.next_id() # every agent has unique id
             dominance = np.random.randint(1, 101) # todo: should be taken from distribution/data
+            specialization = random.choice(['shellfish', 'worm'])
 
             # instantiate class
-            bird = Bird(unique_id, pos, self, dominance)
+            bird = Bird(unique_id, pos, self, dominance, specialization)
 
             # add agent to agent overview
-            self.agents_on_patches[bird.pos].append(bird)
+            # self.agents_on_patches[bird.pos].append(bird)
 
             # place and add to schedule todo: place agent according to ideal distribution
             self.num_agents_on_patches[pos] += 1
@@ -193,7 +195,7 @@ class OystercatcherModel(Model):
             = self.mudflats_potential_intake()
 
         # calculate intake on grassland
-        self.grassland_potential_wtw_intake, self.grassland_potential_energy_intake = self.grassland_potential_intake()
+        # self.grassland_potential_wtw_intake, self.grassland_potential_energy_intake = self.grassland_potential_intake() # todo: dit hoeft niet elke keer berekent te worden, scheelt 5 seconden
 
         # execute model.step (move agents and let them eat) todo: pas schedule aan
         self.schedule.step()
@@ -203,6 +205,7 @@ class OystercatcherModel(Model):
         # todo maak defaultdict for data collection
 
         self.new_tidal_cycle = False
+        # print(self.num_agents_on_patches)
 
     def run_model(self):
         """ Run the model for the time steps indicated in the data set
@@ -288,7 +291,7 @@ class OystercatcherModel(Model):
 
     def mudflats_potential_intake(self):
         """
-        Calculates final potential intake on mussel patches (interference thus excluded) for one time step.
+        Calculates final potential intake excluding interference on mussel patches for one time step.
 
         :return: potential wtw intake (g/time step) and energy intake (kJ/time step)
         """
@@ -315,7 +318,7 @@ class OystercatcherModel(Model):
 
         # calculate potential energy intake excluding interference
         energy_intake = total_intake_wtw * self.FractionTakenUp * self.RatioAFDWtoWet \
-                        * self.AFDWenergyContent
+                        * self.AFDWenergyContent # todo: moet fractiontakenup hier wel?
         energy_intake_cockle = total_intake_wtw_cockle * self.FractionTakenUp * self.RatioAFDWtoWet \
                         * self.AFDWenergyContent
         energy_intake_mac = total_intake_wtw_mac * self.FractionTakenUp * self.RatioAFDWtoWet \
@@ -349,15 +352,15 @@ class OystercatcherModel(Model):
         leoA = 0.000860373  # Zwarts et al. (1996b), taken from WEBTICS
         leoB = 0.220524  # Zwarts et al.(1996b)
         hiddinkA = 0.000625  # Hiddink2003
-        attack_rate = leoA * leoB
+        # attack_rate = leoA * leoB
 
         # calculate capture rate for every cockle size class (number of cockles/s)
-        capture_rate_kok1_num = attack_rate * kok1_density  # numerator of eq 5.9 webtics
-        capture_rate_kok1_den = attack_rate * kok1_handling_time * kok1_density  # denominator without 1 +
-        capture_rate_kok2_num = attack_rate * kok2_density
-        capture_rate_kok2_den = attack_rate * kok2_handling_time * kok2_density
-        capture_rate_kokmj_num = attack_rate * kokmj_density
-        capture_rate_kokmj_den = attack_rate * kokmj_handling_time * kokmj_density
+        capture_rate_kok1_num = leoA * kok1_density  # numerator of eq 5.9 webtics
+        capture_rate_kok1_den = leoA * kok1_handling_time * kok1_density  # denominator without 1 +
+        capture_rate_kok2_num = leoA * kok2_density
+        capture_rate_kok2_den = leoA * kok2_handling_time * kok2_density
+        capture_rate_kokmj_num = leoA * kokmj_density
+        capture_rate_kokmj_den = leoA * kokmj_handling_time * kokmj_density
 
         # capture rate macoma
         capture_rate_mac_num = hiddinkA * mac_density * proportion_macoma  # only take available macoma into account
@@ -368,9 +371,9 @@ class OystercatcherModel(Model):
                             + capture_rate_mac_den
 
         # calculate number of captured prey for each size class
-        capture_rate_kok1 = (capture_rate_kok1_num / final_denominator)
-        capture_rate_kok2 = (capture_rate_kok2_num / final_denominator)
-        capture_rate_kokmj = (capture_rate_kokmj_num / final_denominator)
+        capture_rate_kok1 = capture_rate_kok1_num / final_denominator
+        capture_rate_kok2 = capture_rate_kok2_num / final_denominator
+        capture_rate_kokmj = capture_rate_kokmj_num / final_denominator
         capture_rate_mac = capture_rate_mac_num / final_denominator
         return capture_rate_kok1, capture_rate_kok2, capture_rate_kokmj, capture_rate_mac
 
@@ -380,7 +383,7 @@ class OystercatcherModel(Model):
 
         The patch depletion is also implemented.
 
-        Returns the wet weight consumed (g).
+        Returns the wet weight consumed (g) and the energy consumed (kJ) per time step.
         """
 
         # parameters todo: zet in file
@@ -390,7 +393,7 @@ class OystercatcherModel(Model):
         afdw_intake_grassland = (0.53 * 60 * self.resolution_min) / 1000 # g / time step, Stillman2000
 
         # wtw intake
-        wtw_intake = afdw_intake_grassland * 1 / conversion_afdw_wtw # g / time step
+        wtw_intake = afdw_intake_grassland / conversion_afdw_wtw # g / time step
 
         # calculate energy intake
         energy_intake = (afdw_intake_grassland * self.AFDWenergyContent)  # kJ
