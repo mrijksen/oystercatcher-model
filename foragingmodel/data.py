@@ -112,7 +112,7 @@ def get_patch_availability(start_year, patchIDs): #todo: add grass roost patch
     del df_patch_availability_data['Unnamed: 0']
 
     # set waterheight as index
-    df_patch_availability_data.set_index('waterheight')
+    df_patch_availability_data.set_index('waterheight', inplace=True)
 
     # only get relevant columns (patches with nonzero entries)
     df_patch_availability = df_patch_availability_data.iloc[:, patchIDs - 1] #todo: check this

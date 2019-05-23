@@ -104,7 +104,9 @@ class Bird:
             elif self.model.patch_types[self.pos] == "Grassland":
                 potential_energy_intake_rate = self.model.grassland_potential_energy_intake / (
                         self.model.resolution_min * 60)
-
+            else:
+                print("nooooo", potential_energy_intake_rate)
+            # print(self.model.patch_types[self.pos])
             # if IR < threshold, move to other patch
             if potential_energy_intake_rate < self.model.leaving_threshold:
                 # print("Agent moves due to low potential E intake", potential_energy_intake_rate)
@@ -253,11 +255,11 @@ class Bird:
 
         # if there is a possible patch, choose a random new patch
         else:
-            # print("old position", self.pos)
+
             self.model.num_agents_on_patches[self.pos] -= 1
             self.pos = random.choice(possible_positions)
             self.model.num_agents_on_patches[self.pos] += 1
-            # print("new position", self.pos)
+
 
     @staticmethod
     def interference_stillman_float(density_competitors, local_dominance):

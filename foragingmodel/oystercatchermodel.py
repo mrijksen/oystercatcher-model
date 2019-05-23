@@ -155,6 +155,7 @@ class OystercatcherModel(Model):
 
         # current time step
         time_step = self.schedule.time
+        # print(time_step)
 
         # get new waterheight and patch availability
         self.waterheight = self.waterheight_data[time_step]

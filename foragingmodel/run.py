@@ -25,11 +25,12 @@ def initiate_model(start_year, run_type='real_data'):
 
     else:
 
-        # load artificial patch data
-        df_patch_data = data.get_artificial_patch_data()
+        # load real patch data
+        df_patch_data = data.get_patch_data(start_year)
 
         # load patch availability
-        df_patch_availability = data.get_patch_availability(start_year)
+        df_patch_availability = data.get_patch_availability(start_year, df_patch_data.patchID.values)
+
 
         # load environmental data
         df_env = data.get_environmental_data(start_year)
@@ -44,7 +45,7 @@ if __name__ == "__main__":
 
     # run parameters
     start_year = 2017
-    artificial_run = True
+    artificial_run = False
 
     if artificial_run:
 
@@ -61,7 +62,6 @@ if __name__ == "__main__":
     end_time = time.time()
     print(end_time - start_time, "TIME")
     print(len(model.schedule.agents), "number of agents left")
-
 
     df_high_water = model.df_env[model.df_env.extreem == 'HW']
     df_high_water.reset_index(inplace=True)
@@ -81,13 +81,11 @@ if __name__ == "__main__":
     ax[1].set_ylim(0, 15)
     ax[1].set_xticklabels([])
 
-
     ax[2].plot(df_high_water.date_time.dt.date, df_high_water.time_steps_in_cycle / 2, 'ro', markersize=2)
     ax[2].set_title('Duration of tidal cycle')
     ax[2].set_ylabel('Hours')
     ax[2].set_ylim(0, 15)
     ax[2].set_xticklabels([])
-
 
     ax[3].plot(df_high_water.date_time.dt.date, df_high_water.temperature)
     ax[3].set_title('Temperature')
@@ -95,12 +93,13 @@ if __name__ == "__main__":
     ax[3].set_ylabel('Degrees Celsius')
 
     ax[4].plot(model.schedule.agents[0].start_foraging_list)
-    # print(model.schedule.agents[0].start_foraging_list)
     fig.suptitle('Foraging on mussel bed')
     fig.tight_layout()
     fig.subplots_adjust(top=0.88)
     plt.savefig('test')
 
-    print(model.schedule.agents[0].pos)
+    for item in model.schedule.agents:
+        print (item.pos)
+    # print(model.schedule.agents.pos)
 
     plt.show()
