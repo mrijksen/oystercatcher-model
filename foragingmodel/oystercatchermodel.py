@@ -12,6 +12,8 @@ from collections import defaultdict
 import numpy as np
 import random
 
+np.seterr(divide='ignore')
+
 
 class OystercatcherModel(Model):
 
@@ -329,6 +331,14 @@ class OystercatcherModel(Model):
                                capture_rate_kok2 * conversion_s_to_timestep,
                                capture_rate_kokmj * conversion_s_to_timestep,
                                capture_rate_mac * conversion_s_to_timestep]
+
+        # # if available area is zero, potential intake is zero as well
+        # mask = [self.available_areas == 0][0]
+        # total_intake_wtw[mask] = 0
+        # energy_intake[mask] = 0
+        # energy_intake_cockle[mask] = 0
+        # energy_intake_mac[mask] = 0
+        # total_captured_prey[mask] = 0
         return total_intake_wtw, energy_intake, energy_intake_cockle, energy_intake_mac, total_captured_prey
 
     @staticmethod

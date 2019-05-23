@@ -1,5 +1,6 @@
 import numpy as np
 import random
+np.seterr(divide='ignore')
 
 class Bird:
     """
@@ -76,6 +77,11 @@ class Bird:
                 # potential intake rate (kJ/s)
                 potential_energy_intake_rate = self.model.mussel_potential_energy_intake * relative_uptake \
                                                / (self.model.resolution_min * 60) #todo: dit mss al in model berekenen?
+
+                # potential IR is zero if available area of patch is zero
+                if self.model.available_areas[self.pos] == 0:
+                    potential_energy_intake_rate = 0
+
             elif self.model.patch_types[self.pos] == "Mudflat":
 
                 # interference intake reduction
@@ -91,8 +97,13 @@ class Bird:
                 potential_energy_intake_rate = (energy_intake_cockle + energy_intake_mac) / \
                                                (self.model.resolution_min * 60)
 
+                # potential IR is zero if available area of patch is zero
+                if self.model.available_areas[self.pos] == 0:
+                    potential_energy_intake_rate = 0
+
             elif self.model.patch_types[self.pos] == "Grassland":
-                potential_energy_intake_rate = 0 # todo: niet netjes zo, zet hier echte grass ir in
+                potential_energy_intake_rate = self.model.grassland_potential_energy_intake / (
+                        self.model.resolution_min * 60)
 
             # if IR < threshold, move to other patch
             if potential_energy_intake_rate < self.model.leaving_threshold:
@@ -100,7 +111,7 @@ class Bird:
                 self.move()
 
             # only forage if patch is available
-            if self.model.available_areas[self.pos] > 0: #todo: dit moeten we dus verwerken in potential energy al!
+            if self.model.available_areas[self.pos] > 0:
 
                 # intake rate mussel bed
                 if self.model.patch_types[self.pos] == "Bed":
@@ -203,6 +214,9 @@ class Bird:
         # get total energy intake per second per patch
         total_patch_energy_intake = energy_intake_cockle_sec + energy_intake_mac_sec
 
+        # patches with no available area have an intake of zero todo: to check
+        total_patch_energy_intake[self.model.available_areas == 0] = 0
+
         # get indices of patches with IR that is large enough
         possible_positions = np.where(total_patch_energy_intake > self.model.leaving_threshold)[0] # todo: invalid value encountered in greater
 
@@ -218,6 +232,10 @@ class Bird:
             # calculate final IR on all mussel beds in kJ/s
             final_mussel_intake = relative_mussel_intake * self.model.mussel_potential_energy_intake / \
                                   (self.model.resolution_min * 60)
+
+            # patches with no available area have an intake of zero
+            mask = (self.model.available_areas == 0)[: self.model.patch_max_bed_index + 1]
+            final_mussel_intake[mask] = 0
 
             # get all possible indices and select mussel patches from that
             possible_positions_beds = np.where(final_mussel_intake > self.model.leaving_threshold)[0]
@@ -450,7 +468,7 @@ class Bird:
         energy_intake = intake_wtw * self.model.FractionTakenUp * self.model.RatioAFDWtoWet \
                                     * self.model.AFDWenergyContent
 
-        # check if energy gain does not exceed goal, if so, adapt intake #todo: in functie?
+        # check if energy gain does not exceed goal, if so, adapt intake # todo:" gebeurd dit niet al in fraction_possible_intake?
         if self.energy_gain + energy_intake > self.energy_goal:
             # calculate surplus
             surplus = self.energy_gain + energy_intake - self.energy_goal
