@@ -7,16 +7,21 @@ class Bird:
     Instantiations represent foraging oystercatchers
     """
 
-    def __init__(self, unique_id, pos, model, dominance, specialization):
-
-        # standard params
-        self.unique_id = unique_id
+    def __init__(self, unique_id, pos, model, dominance, specialization, mussel_foraging_efficiency,
+                 cockle_foraging_efficiency, macoma_foraging_efficiency, worm_foraging_efficiency):
         self.model = model
 
-        # this should be read from data file
+        # individual parameters
+        self.unique_id = unique_id
         self.dominance = dominance
-        self.pos = pos
         self.specialization = specialization
+        self.pos = pos
+        self.mussel_foraging_eff = mussel_foraging_efficiency
+        self.cockle_foraging_eff = cockle_foraging_efficiency
+        self.macoma_foraging_eff = macoma_foraging_efficiency
+        self.worm_foraging_eff = worm_foraging_efficiency
+
+        # initial foraging parameters
         self.start_foraging = None # number of steps after high tide
         self.time_foraged = 6 #todo: welke initialisatie waarde ? let op tijdstap (dit is niet in uur)
 
@@ -32,7 +37,7 @@ class Bird:
         self.deposition_efficiency = 0.75  # WEBTICS page 57
         self.BodyGramEnergyCont = 34.295  # kJ/gram fat todo: moet dit niet een soort rate zijn? Nu kan het oneindig snel van en naar gewicht gaan
         self.BodyGramEnergyReq = 45.72666666  # kJ/gram (25% larger)
-        self.minimum_weight = 400 # todo: klopt dit? dit is van webtics?
+        self.minimum_weight = 450 # todo: dit is een algemene parameter
         self.max_stomach_content = 80 # g WtW KerstenVisser1996
 
         # get some data
@@ -74,7 +79,7 @@ class Bird:
                                          / self.model.available_areas[self.pos] #todo: density in model berekenen?
                 relative_uptake = self.interference_stillman_float(density_of_competitors, self.dominance)
 
-                # potential intake rate (kJ/s) #todo: multiply with individual efficiency?
+                # potential intake rate (kJ/s)
                 potential_energy_intake_rate = self.model.mussel_potential_energy_intake * relative_uptake \
                                                / (self.model.resolution_min * 60) #todo: dit mss al in model berekenen?
 
@@ -93,7 +98,7 @@ class Bird:
                 energy_intake_cockle = self.model.energy_intake_cockle[self.pos] * relative_uptake
                 energy_intake_mac = self.model.energy_intake_mac[self.pos]
 
-                # get total energy intake per second per patch (kJ/s) #todo: multiply with efficiency?
+                # get total energy intake per second per patch (kJ/s)
                 potential_energy_intake_rate = (energy_intake_cockle + energy_intake_mac) / \
                                                (self.model.resolution_min * 60)
 
@@ -103,7 +108,7 @@ class Bird:
 
             elif self.model.patch_types[self.pos] == "Grassland":
                 potential_energy_intake_rate = self.model.grassland_potential_energy_intake / (
-                        self.model.resolution_min * 60) #todo: multiply with efficiency?
+                        self.model.resolution_min * 60)
             # else:
             #     print("nooooo", self.model.patch_types[self.pos])
             # print(self.model.patch_types[self.pos])
@@ -118,13 +123,13 @@ class Bird:
                 # intake rate mussel bed
                 if self.model.patch_types[self.pos] == "Bed":
 
-                    # calculate competitor density todo: dit is wss niet meer nodig door move()
-                    num_agents_on_patch = self.model.num_agents_on_patches[self.pos]
-                    density_of_competitors = (num_agents_on_patch - 1)/ self.model.available_areas[
-                        self.pos]
+                    # # calculate competitor density todo: dit is wss niet meer nodig door move()
+                    # num_agents_on_patch = self.model.num_agents_on_patches[self.pos]
+                    # density_of_competitors = (num_agents_on_patch - 1)/ self.model.available_areas[
+                    #     self.pos]
 
-                    # calculate intake todo: multiply with efficiency
-                    wtw_intake, energy_intake = self.consume_mussel_diet(density_of_competitors, self.dominance)
+                    # calculate intake
+                    wtw_intake, energy_intake = self.consume_mussel_diet()
 
                     # update stomach content (add wet weight)
                     self.stomach_content += wtw_intake
@@ -365,7 +370,7 @@ class Bird:
         energy_goal = self.energy_requirements_one_time_step(mean_T) * num_steps_tidal_cycle + weight_energy_requirement
         return energy_goal
 
-    def consume_mussel_diet(self, density_of_competitors, local_dominance):
+    def consume_mussel_diet(self):
         """ Method that lets agent forage on mussel patch. Based on the energy goal and the stomach content
         the intake of an agent is evaluated.
 
@@ -374,11 +379,15 @@ class Bird:
         Returns the wet weight consumed (g).
         """
 
-        # # interference intake reduction
-        relative_uptake = self.interference_stillman_float(density_of_competitors, local_dominance)
+        # calculate competitor density
+        num_agents_on_patch = self.model.num_agents_on_patches[self.pos]
+        density_of_competitors = (num_agents_on_patch - 1) / self.model.available_areas[self.pos]
 
-        # wet intake rate (potential intake rate including interference)
-        wtw_intake = self.model.mussel_potential_wtw_intake * relative_uptake
+        # # interference intake reduction
+        relative_uptake = self.interference_stillman_float(density_of_competitors, self.dominance)
+
+        # wet intake rate (intake rate including interference and foraging efficiency)
+        wtw_intake = self.model.mussel_potential_wtw_intake * relative_uptake * self.mussel_foraging_eff
 
         # calculate possible intake based on stomach left and digestive rate
         possible_wtw_intake = self.calculate_possible_intake() # g / 10 minutes
@@ -432,12 +441,12 @@ class Bird:
         total_captured_kok1, total_captured_kok2, total_captured_kokmj, total_captured_mac \
             = self.model.capture_rates_mudflats
 
-        # only get captured prey from current patch including interference todo: efficiency
+        # only get captured prey from current patch including interference
         total_captured_kok1, total_captured_kok2, total_captured_kokmj, total_captured_mac \
-            = total_captured_kok1[self.pos] * relative_intake, \
-              total_captured_kok2[self.pos] * relative_intake, \
-              total_captured_kokmj[self.pos] * relative_intake, \
-              total_captured_mac[self.pos]
+            = total_captured_kok1[self.pos] * relative_intake * self.cockle_foraging_eff, \
+              total_captured_kok2[self.pos] * relative_intake * self.cockle_foraging_eff, \
+              total_captured_kokmj[self.pos] * relative_intake * self.cockle_foraging_eff, \
+              total_captured_mac[self.pos] * self.macoma_foraging_eff
 
         # wet weight intake, note that we should use capture rate including interference (and not global wtw intake)
         # patch_wtw_intake = self.model.mudflats_potential_wtw_intake[self.pos] * relative_intake #
@@ -500,8 +509,9 @@ class Bird:
 
     def consume_grassland_diet(self):
 
-        potential_wtw_intake, potential_energy_intake = self.model.grassland_potential_wtw_intake, \
-                                                        self.model.grassland_potential_energy_intake
+        potential_wtw_intake, potential_energy_intake = \
+            self.model.grassland_potential_wtw_intake * self.worm_foraging_eff, \
+            self.model.grassland_potential_energy_intake * self.worm_foraging_eff
 
         # calculate possible wtw intake based on stomach left and digestive rate
         possible_wtw_intake = self.calculate_possible_intake()  # g / time step

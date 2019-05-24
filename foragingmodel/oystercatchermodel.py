@@ -59,8 +59,8 @@ class OystercatcherModel(Model):
 
         print(self.patch_types)
         # patches for shellfish/wormspecialists
-        self.patch_indices_mudflats = np.where(self.patch_types == "Mudflat")
-        self.patch_indices_beds = np.where(self.patch_types == "Bed")
+        self.patch_indices_mudflats = np.where(self.patch_types == "Mudflat")[0]
+        self.patch_indices_beds = np.where(self.patch_types == "Bed")[0]
         self.patch_max_bed_index = np.max(self.patch_indices_beds)
         self.patch_index_grassland = np.where(self.patch_types == "Grassland")[0]
 
@@ -130,25 +130,51 @@ class OystercatcherModel(Model):
         self.energy_intake_mac, self.capture_rates_mudflats = [None, None, None, None, None]
         self.grassland_potential_wtw_intake, self.grassland_potential_energy_intake = self.grassland_potential_intake()
 
+        # positions for specialists
+        possible_positions_worm = np.concatenate((self.patch_indices_mudflats, self.patch_index_grassland))
+        possible_positions_shellfish = np.concatenate((self.patch_indices_mudflats, self.patch_indices_beds))
+
         # create birds todo: gebruik hier de verdeling van HK voor de vogels, en maak een lijst met alle vogels
         for i in range(self.init_birds):
 
-            # give random initial position #todo: should be according to ideal distribution
-            pos = 2 # todo: maak dit anders. Zorg ervoor dat er duidelijker onderscheid is tussen mossel/mudflats
-            # todo: wat wordt de initial distribution voor de vogels -> Waarschijnlijk random
+            # # give random initial position #todo: is random ok?
+            # pos = 2
 
             # give agent individual properties
             unique_id = self.next_id() # every agent has unique id
-            dominance = np.random.randint(1, 101) # todo: should be taken from distribution/data
-            specialization = random.choice(['shellfish', 'worm'])
+            # dominance = np.random.randint(1, 101) # todo: should be taken from distribution/data
+            # specialization = random.choice(['shellfish', 'worm'])
 
-            # instantiate class
-            bird = Bird(unique_id, pos, self, dominance, specialization)
+            # choose sex with proportions males/females and worm/shellfish
+            sex = np.random.choice(['male', 'female'], p=[0.55, 0.45])
+            if sex == 'male':
+                specialization = np.random.choice(['worm', 'shellfish'], p=[0.23, 0.77])
+            elif sex == 'female':
+                specialization = np.random.choice(['worm', 'shellfish'], p=[0.66, 0.34])
 
-            # add agent to agent overview
-            # self.agents_on_patches[bird.pos].append(bird)
+            # dominance
+            dominance = np.random.randint(1, 101)
 
-            # place and add to schedule todo: place agent according to ideal distribution
+            # foraging efficiency and position for specializations for different prey
+            if specialization == 'worm':
+                mussel_foraging_efficiency = 0
+                cockle_foraging_efficiency = np.random.normal(0.8, 0.1)
+                macoma_foraging_efficiency = np.random.normal(1, 0.1)
+                worm_foraging_efficiency = np.random.normal(1, 0.1)
+                pos = np.random.choice(possible_positions_worm)
+            elif specialization == 'shellfish':
+                mussel_foraging_efficiency = np.random.normal(1, 0.1)
+                cockle_foraging_efficiency = np.random.normal(1, 0.1)
+                macoma_foraging_efficiency = np.random.normal(0.8, 0.1)
+                worm_foraging_efficiency = 0
+                pos = np.random.choice(possible_positions_shellfish)
+
+
+            # instantiate bird class
+            bird = Bird(unique_id, pos, self, dominance, specialization, mussel_foraging_efficiency,
+                        cockle_foraging_efficiency, macoma_foraging_efficiency, worm_foraging_efficiency)
+
+            # place and add to schedule
             self.num_agents_on_patches[pos] += 1
             self.schedule.add(bird)
 
