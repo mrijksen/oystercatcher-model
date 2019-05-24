@@ -4,10 +4,10 @@
 
 # -------------------------- Initialisation parameters ------------------------------------ #
 
-init_birds = 7000 # number of birds on September, 1
+init_birds = 1	# number of birds on September, 1
 # include distributions for bird initialisation here as well 
 
-resolution_min = 30 # time step size in minutes
+resolution_min = 30 	# time step size in minutes
 
 # IR at which 623g bird with mean effic needs 12 hours of foraging 
 leaving_threshold = 0.02045685 # kJ/s

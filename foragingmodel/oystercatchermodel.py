@@ -57,6 +57,7 @@ class OystercatcherModel(Model):
         self.patch_areas = df_patch_data.area.values
         self.num_patches = df_patch_data.shape[0]
 
+        print(self.patch_types)
         # patches for shellfish/wormspecialists
         self.patch_indices_mudflats = np.where(self.patch_types == "Mudflat")
         self.patch_indices_beds = np.where(self.patch_types == "Bed")

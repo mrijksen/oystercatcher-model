@@ -49,10 +49,16 @@ def get_patch_data(start_year): #todo: add grass & roost patch
                'Macoma_WW', 'Macoma_dens']
     df_patches = df_patches[columns]
 
+    # get grasspatch
+    grasspatch = df_patches[df_patches.type == "Grassland"]
+
     # remove patches with only zero prey densities
     columns = columns[3:]
     df_patches = df_patches.fillna(0)
     df_patches = df_patches[(df_patches[columns].T != 0).any()]
+
+    # add grasspatch (deleted due to zero entries)
+    df_patches = df_patches.append(grasspatch)
 
     # sort on patch id and reset index
     df_patches = df_patches.sort_values('type')
@@ -117,7 +123,8 @@ def get_patch_availability(start_year, patchIDs): #todo: add grass roost patch
     # only get relevant columns (patches with nonzero entries)
     df_patch_availability = df_patch_availability_data.iloc[:, patchIDs - 1] #todo: check this
 
-    # todo: add patch availability voor graspatch (always 1)
+    # add patch availability voor grasspatch (always 1)
+    df_patch_availability['9999'] = 1
 
     return df_patch_availability
 

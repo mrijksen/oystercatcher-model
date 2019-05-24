@@ -74,7 +74,7 @@ class Bird:
                                          / self.model.available_areas[self.pos] #todo: density in model berekenen?
                 relative_uptake = self.interference_stillman_float(density_of_competitors, self.dominance)
 
-                # potential intake rate (kJ/s)
+                # potential intake rate (kJ/s) #todo: multiply with individual efficiency?
                 potential_energy_intake_rate = self.model.mussel_potential_energy_intake * relative_uptake \
                                                / (self.model.resolution_min * 60) #todo: dit mss al in model berekenen?
 
@@ -93,7 +93,7 @@ class Bird:
                 energy_intake_cockle = self.model.energy_intake_cockle[self.pos] * relative_uptake
                 energy_intake_mac = self.model.energy_intake_mac[self.pos]
 
-                # get total energy intake per second per patch (kJ/s)
+                # get total energy intake per second per patch (kJ/s) #todo: multiply with efficiency?
                 potential_energy_intake_rate = (energy_intake_cockle + energy_intake_mac) / \
                                                (self.model.resolution_min * 60)
 
@@ -103,9 +103,9 @@ class Bird:
 
             elif self.model.patch_types[self.pos] == "Grassland":
                 potential_energy_intake_rate = self.model.grassland_potential_energy_intake / (
-                        self.model.resolution_min * 60)
-            else:
-                print("nooooo", potential_energy_intake_rate)
+                        self.model.resolution_min * 60) #todo: multiply with efficiency?
+            # else:
+            #     print("nooooo", self.model.patch_types[self.pos])
             # print(self.model.patch_types[self.pos])
             # if IR < threshold, move to other patch
             if potential_energy_intake_rate < self.model.leaving_threshold:
@@ -123,7 +123,7 @@ class Bird:
                     density_of_competitors = (num_agents_on_patch - 1)/ self.model.available_areas[
                         self.pos]
 
-                    # calculate intake todo: dit is wss niet meer nodig door move ()
+                    # calculate intake todo: multiply with efficiency
                     wtw_intake, energy_intake = self.consume_mussel_diet(density_of_competitors, self.dominance)
 
                     # update stomach content (add wet weight)
@@ -135,7 +135,7 @@ class Bird:
                 # intake rate mudflat
                 elif self.model.patch_types[self.pos] == "Mudflat":
 
-                    wtw_intake, energy_intake = self.consume_mudflats_diet() # todo: density is hier al bekend
+                    wtw_intake, energy_intake = self.consume_mudflats_diet() # todo: multiply with efficiency
 
                     # update stomach content (add wet weight)
                     self.stomach_content += wtw_intake
@@ -150,7 +150,7 @@ class Bird:
                     if self.model.temperature < 0:
                         wtw_intake, energy_intake = [0, 0]
                     else:
-                        wtw_intake, energy_intake = self.consume_grassland_diet()
+                        wtw_intake, energy_intake = self.consume_grassland_diet() #todo: multiply with efficiency
 
                     # update stomach content (add wet weight)
                     self.stomach_content += wtw_intake
@@ -169,7 +169,7 @@ class Bird:
 
             # if energy goal not reached, start foraging immediately in next cycle
             if self.energy_gain < self.energy_goal:
-                self.time_foraged = 1000 # todo: not neat to like this maybe?
+                self.time_foraged = 1000 # todo: not neat to do like this maybe? FIX
 
             # energy consumption
             energy_consumed = self.energy_requirements_one_time_step(self.model.temperature) \
@@ -213,7 +213,7 @@ class Bird:
                                    (self.model.resolution_min * 60)
         energy_intake_mac_sec = self.model.energy_intake_mac / (self.model.resolution_min * 60)
 
-        # get total energy intake per second per patch
+        # get total energy intake per second per patch todo: multiply with efficiency?
         total_patch_energy_intake = energy_intake_cockle_sec + energy_intake_mac_sec
 
         # patches with no available area have an intake of zero todo: to check
@@ -233,7 +233,7 @@ class Bird:
 
             # calculate final IR on all mussel beds in kJ/s
             final_mussel_intake = relative_mussel_intake * self.model.mussel_potential_energy_intake / \
-                                  (self.model.resolution_min * 60)
+                                  (self.model.resolution_min * 60) # todo: multiply with efficiency?
 
             # patches with no available area have an intake of zero
             mask = (self.model.available_areas == 0)[: self.model.patch_max_bed_index + 1]
@@ -432,7 +432,7 @@ class Bird:
         total_captured_kok1, total_captured_kok2, total_captured_kokmj, total_captured_mac \
             = self.model.capture_rates_mudflats
 
-        # only get captured prey from current patch including interference
+        # only get captured prey from current patch including interference todo: efficiency
         total_captured_kok1, total_captured_kok2, total_captured_kokmj, total_captured_mac \
             = total_captured_kok1[self.pos] * relative_intake, \
               total_captured_kok2[self.pos] * relative_intake, \

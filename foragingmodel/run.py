@@ -28,8 +28,11 @@ def initiate_model(start_year, run_type='real_data'):
         # load real patch data
         df_patch_data = data.get_patch_data(start_year)
 
+        # get patchIDs
+        patchIDs = df_patch_data[df_patch_data.type != "Grassland"].patchID.values
+
         # load patch availability
-        df_patch_availability = data.get_patch_availability(start_year, df_patch_data.patchID.values)
+        df_patch_availability = data.get_patch_availability(start_year, patchIDs)
 
 
         # load environmental data
@@ -68,7 +71,7 @@ if __name__ == "__main__":
 
     # plot reference weight from data, weight from simulation, foragingtime, temperature?
     fig, ax = plt.subplots(5, 1)
-    ax[0].plot( df_high_water.weight,  color='purple', label="reference weight")
+    ax[0].plot(df_high_water.weight,  color='purple', label="reference weight")
     ax[0].set_title('Weight')
     ax[0].plot( model.schedule.agents[0].weight_throughout_cycle, label="actual weight")
     ax[0].legend()
@@ -99,7 +102,7 @@ if __name__ == "__main__":
     plt.savefig('test')
 
     for item in model.schedule.agents:
-        print (item.pos)
+        print (model.patch_types[item.pos], model.patch_ids[item.pos], item.specialization)
     # print(model.schedule.agents.pos)
 
     plt.show()
