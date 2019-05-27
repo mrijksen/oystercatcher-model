@@ -27,7 +27,7 @@ class Bird:
 
         # stomach, weight, energy goal
         self.stomach_content = 0 # g todo: waarmee initialiseren?
-        self.weight = 500 # todo: webtics, klopt dit?
+        self.weight = 548.9 # reference weight on sept 1, g
         self.energy_goal = None #kJ
         self.energy_gain = 0 # energy already foraged kJ
 
@@ -45,15 +45,18 @@ class Bird:
         self.stomach_content_list = []
         self.foraging_time_per_cycle = []
         self.start_foraging_list = []
+        self.positions = []
 
     def step(self):
         """A model step. Move, then eat. """
+
+        self.positions.append(self.pos)
 
         # determine energy goal at start of new tidal cycle and set gain to zero
         if self.model.new_tidal_cycle:
 
             # get some data
-            self.stomach_content_list.append(self.stomach_content)
+            # self.stomach_content_list.append(self.stomach_content)
             self.weight_throughout_cycle.append(self.weight)
 
             # calculate goal and determine energy already gained
@@ -109,12 +112,9 @@ class Bird:
             elif self.model.patch_types[self.pos] == "Grassland":
                 potential_energy_intake_rate = self.model.grassland_potential_energy_intake / (
                         self.model.resolution_min * 60)
-            # else:
-            #     print("nooooo", self.model.patch_types[self.pos])
-            # print(self.model.patch_types[self.pos])
+
             # if IR < threshold, move to other patch
             if potential_energy_intake_rate < self.model.leaving_threshold:
-                # print("Agent moves due to low potential E intake", potential_energy_intake_rate)
                 self.move()
 
             # only forage if patch is available
@@ -152,7 +152,7 @@ class Bird:
                 elif self.model.patch_types[self.pos] == "Grassland":
 
                     # intake rate becomes zero at low temperatures # todo: hier nacht invoegen
-                    if self.model.temperature < 0:
+                    if (self.model.temperature < 0) | (self.model.day_night == 'N'):
                         wtw_intake, energy_intake = [0, 0]
                     else:
                         wtw_intake, energy_intake = self.consume_grassland_diet() #todo: multiply with efficiency

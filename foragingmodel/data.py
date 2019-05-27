@@ -37,6 +37,8 @@ def get_patch_data(start_year): #todo: add grass & roost patch
     """ Load data frame with patch info for specific year.
 
     Patch characteristics are patchID, type, area, densities of prey
+
+    Note that grasspatch should be included in data
     """
     path = 'C:/Users/Marleen/Documents/thesis project/Data zaken/Data/Patch data/Patch_Info_Vlieland_{}.csv'.format(start_year)
     df_patches = pd.read_csv(path, delimiter=",")
@@ -109,6 +111,8 @@ def get_patch_availability(start_year, patchIDs): #todo: add grass roost patch
     The columns of this data frame are the patchIDs, the last column is the waterheight.
 
     The values indicate the fraction of the patch available for every waterheight.
+
+    Note that the grassland availability should be included in the data.
     """
 
     # get data and remove unnessecary column
@@ -122,10 +126,6 @@ def get_patch_availability(start_year, patchIDs): #todo: add grass roost patch
 
     # only get relevant columns (patches with nonzero entries)
     df_patch_availability = df_patch_availability_data.iloc[:, patchIDs - 1] #todo: check this
-
-    # add patch availability voor grasspatch (always 1)
-    df_patch_availability['9999'] = 1
-
     return df_patch_availability
 
 

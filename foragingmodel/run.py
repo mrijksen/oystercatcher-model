@@ -29,7 +29,7 @@ def initiate_model(start_year, run_type='real_data'):
         df_patch_data = data.get_patch_data(start_year)
 
         # get patchIDs
-        patchIDs = df_patch_data[df_patch_data.type != "Grassland"].patchID.values
+        patchIDs = df_patch_data.patchID.values
 
         # load patch availability
         df_patch_availability = data.get_patch_availability(start_year, patchIDs)
@@ -96,13 +96,14 @@ if __name__ == "__main__":
     ax[3].set_ylabel('Degrees Celsius')
 
     ax[4].plot(model.schedule.agents[0].start_foraging_list)
-    fig.suptitle('Foraging on mussel bed')
+    # fig.suptitle('Foraging on mussel bed')
     fig.tight_layout()
     fig.subplots_adjust(top=0.88)
     plt.savefig('test')
 
     for item in model.schedule.agents:
         print (model.patch_types[item.pos], model.patch_ids[item.pos], item.specialization)
-    # print(model.schedule.agents.pos)
+    print(np.mean(model.schedule.agents[0].foraging_time_per_cycle) / 2, "mean foraging time")
+    print(model.schedule.agents[0].positions)
 
     plt.show()

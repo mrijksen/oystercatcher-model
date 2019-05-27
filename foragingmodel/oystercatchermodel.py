@@ -57,7 +57,6 @@ class OystercatcherModel(Model):
         self.patch_areas = df_patch_data.area.values
         self.num_patches = df_patch_data.shape[0]
 
-        print(self.patch_types)
         # patches for shellfish/wormspecialists
         self.patch_indices_mudflats = np.where(self.patch_types == "Mudflat")[0]
         self.patch_indices_beds = np.where(self.patch_types == "Bed")[0]
@@ -65,7 +64,7 @@ class OystercatcherModel(Model):
         self.patch_index_grassland = np.where(self.patch_types == "Grassland")[0]
 
 
-        # cockle data todo: dit moet geupdate worden elke tidal
+        # cockle data
         self.cockle_fresh_weight = df_patch_data[['Cockle_1j_FW',
                                                   'Cockle_2j_FW',
                                                   'Cockle_mj_FW']].values # [0] = 1j, [1] = 2j, [3] = mj
@@ -84,7 +83,7 @@ class OystercatcherModel(Model):
         # mussel data
         self.mussel_density = params["mussel_density"] # infinitely rich mussel patches
         self.mussel_wtw_gain = params["mussel_wtw_gain"] / (24 / (self.resolution_min / 60))  # wtw gain per time step
-        self.mussel_afdw = params["mussel_afdw"]  # g AFDW GossCustard2001 # todo: dit moet veranderen
+        self.mussel_afdw = params["mussel_afdw"]  # g, at 1 september
         self.mussel_wet_weight = self.mussel_afdw / self.RatioAFDWtoWet  # g WtW calculated with conversion factor
         # self.mussel_intake_rates =
 
@@ -97,6 +96,10 @@ class OystercatcherModel(Model):
 
         # todo: datacollector here, think about all data we want to collect
         self.data = defaultdict(list)
+        self.cockle_fresh_weight_list = []
+        self.cockle_wet_weight_list = []
+        self.mussel_weight_list = []
+        self.cockle_sizes_list = []
 
         # create lists of environmental data input
         self.temperature_data = df_env['temperature'].tolist()
@@ -110,6 +113,7 @@ class OystercatcherModel(Model):
         self.one_y_wtw_cockle_gr_data = df_env['1y_wtw_cockle_growth'].tolist()
         self.two_y_wtw_cockle_gr_data = df_env['2y_wtw_cockle_growth'].tolist()
         self.proportion_macoma_data = df_env['proportion_macoma'].tolist()
+        self.day_night_data = df_env['day_night'].tolist()
 
         # these parameters we get from the environmental data input
         self.time_in_cycle = None
@@ -123,6 +127,7 @@ class OystercatcherModel(Model):
         self.cockle_sizes = None
         self.handling_time_cockles = None
         self.available_areas = None
+        self.day_night = None
 
         # intake rate variables
         self.mussel_potential_wtw_intake, self.mussel_potential_energy_intake = [None, None]
@@ -131,19 +136,14 @@ class OystercatcherModel(Model):
         self.grassland_potential_wtw_intake, self.grassland_potential_energy_intake = self.grassland_potential_intake()
 
         # positions for specialists
-        possible_positions_worm = np.concatenate((self.patch_indices_mudflats, self.patch_index_grassland))
+        possible_positions_worm = np.concatenate((self.patch_indices_mudflats, self.patch_index_grassland)) # todo grass?
         possible_positions_shellfish = np.concatenate((self.patch_indices_mudflats, self.patch_indices_beds))
 
         # create birds todo: gebruik hier de verdeling van HK voor de vogels, en maak een lijst met alle vogels
         for i in range(self.init_birds):
 
-            # # give random initial position #todo: is random ok?
-            # pos = 2
-
             # give agent individual properties
             unique_id = self.next_id() # every agent has unique id
-            # dominance = np.random.randint(1, 101) # todo: should be taken from distribution/data
-            # specialization = random.choice(['shellfish', 'worm'])
 
             # choose sex with proportions males/females and worm/shellfish
             sex = np.random.choice(['male', 'female'], p=[0.55, 0.45])
@@ -169,7 +169,6 @@ class OystercatcherModel(Model):
                 worm_foraging_efficiency = 0
                 pos = np.random.choice(possible_positions_shellfish)
 
-
             # instantiate bird class
             bird = Bird(unique_id, pos, self, dominance, specialization, mussel_foraging_efficiency,
                         cockle_foraging_efficiency, macoma_foraging_efficiency, worm_foraging_efficiency)
@@ -182,18 +181,24 @@ class OystercatcherModel(Model):
 
         # current time step
         time_step = self.schedule.time
-        # print(time_step)
 
         # get new waterheight and patch availability
         self.waterheight = self.waterheight_data[time_step]
 
+        # check day or night
+        self.day_night = self.day_night_data[time_step]
+
         # calculate available area for every patch
         self.available_areas = self.df_patch_availability.loc[self.waterheight].values * self.patch_areas
+
+        # calculate new mussel weight
+        self.mussel_wet_weight += self.mussel_wet_weight * self.mussel_wtw_gain
+        self.mussel_afdw = self.mussel_wet_weight * self.RatioAFDWtoWet
 
         # check if new tidal cycle starts
         if self.extreem_data[time_step] == 'HW':
 
-            # get new parameters from data file
+            # get new parameters from data file todo: is this needed?
             self.time_in_cycle = 0
             self.new_tidal_cycle = True
             self.reference_weight_birds = self.weight_data[time_step]
@@ -202,19 +207,24 @@ class OystercatcherModel(Model):
             self.temperature = self.temperature_data[time_step]
             self.proportion_macoma = self.proportion_macoma_data[time_step]
 
-            # calculate new fresh weight cockles
+            # calculate new fresh weight cockles for 1y and 2y cockles
+            self.cockle_fresh_weight[:, 0] += self.cockle_fresh_weight[:, 0] * self.one_y_fw_cockle_gr_data[time_step]
+            self.cockle_fresh_weight[:, 1] += self.cockle_fresh_weight[:, 1] * self.two_y_fw_cockle_gr_data[time_step]
 
-            # calculate wet weight cockles (g)
-
-            # calculate new mussel weight
+            # calculate new wet weight cockles for all year classes (g)
+            self.cockle_wet_weight[:, 0] += self.cockle_wet_weight[:, 0] * self.one_y_wtw_cockle_gr_data[time_step]
+            self.cockle_wet_weight[:, [1, 2]] += self.cockle_wet_weight[:, [1, 2]] * \
+                                                 self.two_y_wtw_cockle_gr_data[time_step]
 
             # calculate new size cockles (mm) with formula that relates fresh weight to length and handling time
             self.cockle_sizes = self.CockFWtoSizeA * (self.cockle_fresh_weight ** self.CockFWtoSizeB)
             self.handling_time_cockles = self.calculate_handling_time_cockles(self.cockle_sizes)
 
-
-            # todo: misschien als we geen interferentie meenemen hier de intake rate voor mudflats berekenen?
-            # todo: sowieso voor elke patch de non-interference IR berekenen (in plaats van in agents)
+            # todo data collection
+            self.cockle_fresh_weight_list.append(self.cockle_fresh_weight[:, 0][-1])
+            self.cockle_wet_weight_list.append(self.cockle_wet_weight[:, 0][-1])
+            self.mussel_weight_list.append(self.mussel_wet_weight)
+            self.cockle_sizes_list.append(self.cockle_sizes[:, 0][-1])
 
         # calculate intake rate for mussel patches (without interference)
         self.mussel_potential_wtw_intake, self.mussel_potential_energy_intake = self.mussel_potential_intake()
