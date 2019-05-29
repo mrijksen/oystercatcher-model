@@ -78,7 +78,7 @@ class Bird:
             if self.model.patch_types[self.pos] == "Bed":
 
                 # interference intake reduction
-                density_of_competitors = (self.model.num_agents_on_patches[self.pos] - 1)\
+                density_of_competitors = ((self.model.num_agents_on_patches[self.pos] - 1) * self.model.agg_factor_bed)\
                                          / self.model.available_areas[self.pos] #todo: density in model berekenen?
                 relative_uptake = self.interference_stillman_float(density_of_competitors, self.dominance)
 
@@ -93,8 +93,8 @@ class Bird:
             elif self.model.patch_types[self.pos] == "Mudflat":
 
                 # interference intake reduction
-                density_of_competitors = (self.model.num_agents_on_patches[self.pos] - 1) \
-                                         / self.model.available_areas[self.pos]
+                density_of_competitors = ((self.model.num_agents_on_patches[self.pos] - 1) *
+                                          self.model.agg_factor_mudflats) / self.model.available_areas[self.pos]
                 relative_uptake = self.calculate_cockle_relative_intake(density_of_competitors, 1, 1)
 
                 # energy intake current patch for cockle and macoma (kJ/s) todo: hier misschien functie van?
@@ -211,7 +211,8 @@ class Bird:
         ## todo: dit gedeelte is nu een beetje dubbel met het deel waarbij de agent op eigen patch kijkt wat de IR is
 
         # calculate relative intake rate for cockles on mudflats (based on densities)
-        relative_cockle_intake = self.calculate_cockle_relative_intake(all_patch_densities, 1, 1) #todo: haal onnodige variabelen weg
+        relative_cockle_intake = self.calculate_cockle_relative_intake(all_patch_densities *
+                                                                       self.model.agg_factor_mudflats, 1, 1) #todo: haal onnodige variabelen weg
 
         # energy intake on all patches for cockle and macoma per second
         energy_intake_cockle_sec = (self.model.energy_intake_cockle * relative_cockle_intake) / \
@@ -231,7 +232,8 @@ class Bird:
         if self.specialization == "shellfish":
 
             # density of competitors on mussel patches
-            density_competitors_bed = all_patch_densities[: self.model.patch_max_bed_index + 1] # todo: mussel patches moeten dus bovenaan!
+            density_competitors_bed = all_patch_densities[: self.model.patch_max_bed_index + 1] \
+                                      * self.model.agg_factor_bed# todo: mussel patches moeten dus bovenaan!
 
             # calculate relative IR for all mussel beds
             relative_mussel_intake = self.interference_stillman_array(density_competitors_bed, self.dominance)
@@ -381,7 +383,8 @@ class Bird:
 
         # calculate competitor density
         num_agents_on_patch = self.model.num_agents_on_patches[self.pos]
-        density_of_competitors = (num_agents_on_patch - 1) / self.model.available_areas[self.pos]
+        density_of_competitors = ((num_agents_on_patch - 1) / self.model.available_areas[self.pos]) \
+                                 * self.model.agg_factor_bed
 
         # # interference intake reduction
         relative_uptake = self.interference_stillman_float(density_of_competitors, self.dominance)
@@ -428,7 +431,8 @@ class Bird:
         """
 
         # for cockles, calculate uptake reduction
-        bird_density = (self.model.num_agents_on_patches[self.pos] - 1) / self.model.available_areas[self.pos]
+        bird_density = ((self.model.num_agents_on_patches[self.pos] - 1) / self.model.available_areas[self.pos]) \
+                       * self.model.agg_factor_mudflats
 
         # parameters
         attack_distance = 2.0  # webtics, stillman 2002

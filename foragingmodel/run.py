@@ -70,7 +70,7 @@ if __name__ == "__main__":
     df_high_water.reset_index(inplace=True)
 
     # plot reference weight from data, weight from simulation, foragingtime, temperature?
-    fig, ax = plt.subplots(5, 1)
+    fig, ax = plt.subplots(6, 1)
     ax[0].plot(df_high_water.weight,  color='purple', label="reference weight")
     ax[0].set_title('Weight')
     ax[0].plot( model.schedule.agents[0].weight_throughout_cycle, label="actual weight")
@@ -97,13 +97,18 @@ if __name__ == "__main__":
 
     ax[4].plot(model.schedule.agents[0].start_foraging_list)
     # fig.suptitle('Foraging on mussel bed')
+
+    ax[5].plot(model.waterheight_data)
     fig.tight_layout()
     fig.subplots_adjust(top=0.88)
     plt.savefig('test')
 
-    for item in model.schedule.agents:
-        print (model.patch_types[item.pos], model.patch_ids[item.pos], item.specialization)
+    # for item in model.schedule.agents:
+    #     print (model.patch_types[item.pos], model.patch_ids[item.pos], item.specialization)
     print(np.mean(model.schedule.agents[0].foraging_time_per_cycle) / 2, "mean foraging time")
     print(model.schedule.agents[0].positions)
+    print(model.schedule.agents[0].dominance)
+    print(model.schedule.agents[0].specialization)
+
 
     plt.show()

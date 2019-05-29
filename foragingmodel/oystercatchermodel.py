@@ -27,6 +27,12 @@ class OystercatcherModel(Model):
         """
         super().__init__()
 
+        # SA parameters
+        self.relative_density = 1
+        self.relative_threshold = 1
+        self.agg_factor_mudflats = 8 # todo: implement this
+        self.agg_factor_bed = 8
+
         # get data files
         self.patch_data = df_patch_data
         self.df_env = df_env
@@ -46,7 +52,7 @@ class OystercatcherModel(Model):
         self.LeftOverShellfish = params["LeftOverShellfish"]  # ZwartEnsKerstenetal1996
 
         # threshold to leave patch
-        self.leaving_threshold = params["leaving_threshold"]
+        self.leaving_threshold = params["leaving_threshold"] * self.relative_threshold
 
         # calculate number of time steps in total
         self.num_steps = df_env.shape[0]
@@ -73,11 +79,11 @@ class OystercatcherModel(Model):
                                                 'Cockle_mj_WW']].values
         self.cockle_densities = df_patch_data[['Cockle_1j_dens',
                                                'Cockle_2j_dens',
-                                               'Cockle_mj_dens']].values
+                                               'Cockle_mj_dens']].values * self.relative_density
 
         # macoma data
         self.macoma_wet_weight = df_patch_data['Macoma_WW'].values
-        self.macoma_density = df_patch_data['Macoma_dens'].values
+        self.macoma_density = df_patch_data['Macoma_dens'].values * self.relative_density
         self.handling_time_macoma = self.calculate_handling_time_macoma()  # does not change during simulation
 
         # mussel data
@@ -149,9 +155,10 @@ class OystercatcherModel(Model):
             sex = np.random.choice(['male', 'female'], p=[0.55, 0.45])
             if sex == 'male':
                 specialization = np.random.choice(['worm', 'shellfish'], p=[0.23, 0.77])
+                # specialization = 'worm'
             elif sex == 'female':
                 specialization = np.random.choice(['worm', 'shellfish'], p=[0.66, 0.34])
-
+                # specialization = 'worm'
             # dominance
             dominance = np.random.randint(1, 101)
 
