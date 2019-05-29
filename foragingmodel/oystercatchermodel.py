@@ -30,7 +30,7 @@ class OystercatcherModel(Model):
         # SA parameters
         self.relative_density = 1
         self.relative_threshold = 1
-        self.agg_factor_mudflats = 8 # todo: implement this
+        self.agg_factor_mudflats = 20 # todo: implement this
         self.agg_factor_bed = 8
 
         # get data files
