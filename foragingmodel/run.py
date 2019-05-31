@@ -33,10 +33,8 @@ def initiate_model(start_year, run_type='real_data'):
         # load patch availability
         df_patch_availability = data.get_patch_availability(start_year, patchIDs)
 
-
         # load environmental data
         df_env = data.get_environmental_data(start_year)
-
 
     # instantiate model
     # model = OystercatcherModel(params, patch_name_list, prey, area_of_patches, df_env, df_patch, df_patch_availability)
@@ -69,24 +67,34 @@ if __name__ == "__main__":
     df_high_water.reset_index(inplace=True)
 
     # plot reference weight from data, weight from simulation, foragingtime, temperature?
-    fig, ax = plt.subplots(6, 1)
+    fig, ax = plt.subplots(4, 1)
     ax[0].plot(df_high_water.weight,  color='purple', label="reference weight")
     ax[0].set_title('Weight')
-    ax[0].plot( model.schedule.agents[0].weight_throughout_cycle, label="actual weight")
+    # ax[0].plot( model.schedule.agents[0].weight_throughout_cycle, label="actual weight")
+    ax[0].plot(np.array(model.data['mean_weight_w']), markersize=2, label='worm')
+    ax[0].plot(np.array(model.data['mean_weight_s']), markersize=2, label='shellfish')
     ax[0].legend()
     ax[0].set_ylabel('Gram')
     ax[0].set_xticklabels([])
 
-    ax[1].plot(np.array(model.schedule.agents[0].foraging_time_per_cycle)/2, 'go', markersize=2)
-    ax[1].set_title('Time spend foraging')
+    # ax[1].plot(np.array(model.schedule.agents[0].foraging_time_per_cycle)/2, 'go', markersize=2)
+    ax[1].set_title('Mean time spend foraging')
+    ax[1].plot(np.array(model.data['mean_foraging_w']), markersize=2, label='worm')
+    ax[1].plot(np.array(model.data['mean_foraging_s']), markersize=2, label='shellfish')
+    ax[1].legend()
     ax[1].set_ylabel('Hours')
     ax[1].set_ylim(0, 15)
     ax[1].set_xticklabels([])
 
-    ax[2].plot(df_high_water.date_time.dt.date, df_high_water.time_steps_in_cycle / 2, 'ro', markersize=2)
-    ax[2].set_title('Duration of tidal cycle')
-    ax[2].set_ylabel('Hours')
-    ax[2].set_ylim(0, 15)
+    # ax[2].plot(df_high_water.date_time.dt.date, df_high_water.time_steps_in_cycle / 2, 'ro', markersize=2)
+    # ax[2].set_title('Duration of tidal cycle')
+    # ax[2].set_ylabel('Hours')
+    # ax[2].set_ylim(0, 15)
+    # ax[2].set_xticklabels([])
+
+    ax[2].plot(model.waterheight_data)
+    ax[2].set_title('Water level')
+    ax[2].set_ylabel('cm above NAP')
     ax[2].set_xticklabels([])
 
     ax[3].plot(df_high_water.date_time.dt.date, df_high_water.temperature)
@@ -94,20 +102,11 @@ if __name__ == "__main__":
     ax[3].set_xlabel('Month')
     ax[3].set_ylabel('Degrees Celsius')
 
-    ax[4].plot(model.schedule.agents[0].start_foraging_list)
-    # fig.suptitle('Foraging on mussel bed')
+    # ax[4].plot(model.schedule.agents[0].start_foraging_list)
+    fig.suptitle('Year {}/{}, number of agents: {}, standard params'.format(start_year, start_year + 1, 1000))
 
-    ax[5].plot(model.waterheight_data)
+
     fig.tight_layout()
     fig.subplots_adjust(top=0.88)
     plt.savefig('test')
-
-    # for item in model.schedule.agents:
-    #     print (model.patch_types[item.pos], model.patch_ids[item.pos], item.specialization)
-    print(np.mean(model.schedule.agents[0].foraging_time_per_cycle) / 2, "mean foraging time")
-    print(model.schedule.agents[0].positions)
-    print(model.schedule.agents[0].dominance)
-    print(model.schedule.agents[0].specialization)
-
-
     plt.show()

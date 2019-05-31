@@ -24,6 +24,7 @@ class Bird:
         # initial foraging parameters
         self.start_foraging = None # number of steps after high tide
         self.time_foraged = 6 #todo: welke initialisatie waarde ? let op tijdstap (dit is niet in uur)
+        self.goal_reached = True
 
         # stomach, weight, energy goal
         self.stomach_content = 0 # g todo: waarmee initialiseren?
@@ -35,7 +36,7 @@ class Bird:
         max_digestive_rate = 0.263 # g WtW / min KerstenVisser1996
         self.max_digestive_rate = max_digestive_rate * self.model.resolution_min # digestive rate per 10 minutes
         self.deposition_efficiency = 0.75  # WEBTICS page 57
-        self.BodyGramEnergyCont = 34.295  # kJ/gram fat todo: moet dit niet een soort rate zijn? Nu kan het oneindig snel van en naar gewicht gaan
+        self.BodyGramEnergyCont = 34.295  # kJ/gram fat
         self.BodyGramEnergyReq = 45.72666666  # kJ/gram (25% larger)
         self.minimum_weight = 450 # todo: dit is een algemene parameter
         self.max_stomach_content = 80 # g WtW KerstenVisser1996
@@ -55,8 +56,7 @@ class Bird:
         # determine energy goal at start of new tidal cycle and set gain to zero
         if self.model.new_tidal_cycle:
 
-            # get some data
-            # self.stomach_content_list.append(self.stomach_content)
+            # get some data todo: needed?
             self.weight_throughout_cycle.append(self.weight)
 
             # calculate goal and determine energy already gained
@@ -64,8 +64,11 @@ class Bird:
                                                              self.model.total_number_steps_in_cycle)
             self.energy_gain = 0
 
-            # calculate when to start foraging
-            self.start_foraging = int(self.model.steps_to_low_tide - (self.time_foraged / 2))
+            # calculate when to start foraging depending if goal was reached in prev cycle
+            if self.goal_reached:
+                self.start_foraging = int(self.model.steps_to_low_tide - (self.time_foraged / 2))
+            else:
+                self.start_foraging = 0
             self.start_foraging_list.append(self.start_foraging)
 
             # keep track of time foraged in coming cycle
@@ -109,9 +112,10 @@ class Bird:
                 if self.model.available_areas[self.pos] == 0:
                     potential_energy_intake_rate = 0
 
-            elif self.model.patch_types[self.pos] == "Grassland":
+            else:
                 potential_energy_intake_rate = self.model.grassland_potential_energy_intake / (
                         self.model.resolution_min * 60)
+
 
             # if IR < threshold, move to other patch
             if potential_energy_intake_rate < self.model.leaving_threshold:
@@ -148,20 +152,20 @@ class Bird:
                     # update energy gain
                     self.energy_gain += energy_intake
 
-                # intake rate grasslands
-                elif self.model.patch_types[self.pos] == "Grassland":
+            # intake rate grasslands (independent of available area)
+            if self.model.patch_types[self.pos] == "Grassland":
 
-                    # intake rate becomes zero at low temperatures # todo: hier nacht invoegen
-                    if (self.model.temperature < 0) | (self.model.day_night == 'N'):
-                        wtw_intake, energy_intake = [0, 0]
-                    else:
-                        wtw_intake, energy_intake = self.consume_grassland_diet() #todo: multiply with efficiency
+                # intake rate becomes zero at low temperatures
+                if (self.model.temperature < 0) | (self.model.day_night == 'N'):
+                    wtw_intake, energy_intake = [0, 0]
+                else:
+                    wtw_intake, energy_intake = self.consume_grassland_diet()
 
-                    # update stomach content (add wet weight)
-                    self.stomach_content += wtw_intake
+                # update stomach content (add wet weight)
+                self.stomach_content += wtw_intake
 
-                    # update energy gain
-                    self.energy_gain += energy_intake
+                # update energy gain
+                self.energy_gain += energy_intake
 
         # digestion
         self.stomach_content -= min(self.max_digestive_rate, self.stomach_content)
@@ -174,7 +178,9 @@ class Bird:
 
             # if energy goal not reached, start foraging immediately in next cycle
             if self.energy_gain < self.energy_goal:
-                self.time_foraged = 1000 # todo: not neat to do like this maybe? FIX
+                self.goal_reached = False
+            else:
+                self.goal_reached = True
 
             # energy consumption
             energy_consumed = self.energy_requirements_one_time_step(self.model.temperature) \
@@ -254,7 +260,7 @@ class Bird:
         if not len(possible_positions):
             if self.specialization == "worm":
                 self.model.num_agents_on_patches[self.pos] -= 1
-                self.pos = self.model.patch_index_grassland
+                self.pos = self.model.patch_index_grassland[0]
                 self.model.num_agents_on_patches[self.pos] += 1
             else:
                 # todo: move to roost?

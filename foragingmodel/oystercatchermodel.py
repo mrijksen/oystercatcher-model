@@ -30,7 +30,7 @@ class OystercatcherModel(Model):
         # SA parameters
         self.relative_density = 1
         self.relative_threshold = 1
-        self.agg_factor_mudflats = 20 # todo: implement this
+        self.agg_factor_mudflats = 10 # todo: implement this
         self.agg_factor_bed = 8
 
         # get data files
@@ -68,6 +68,7 @@ class OystercatcherModel(Model):
         self.patch_indices_beds = np.where(self.patch_types == "Bed")[0]
         self.patch_max_bed_index = np.max(self.patch_indices_beds)
         self.patch_index_grassland = np.where(self.patch_types == "Grassland")[0]
+
 
 
         # cockle data
@@ -120,6 +121,7 @@ class OystercatcherModel(Model):
         self.two_y_wtw_cockle_gr_data = df_env['2y_wtw_cockle_growth'].tolist()
         self.proportion_macoma_data = df_env['proportion_macoma'].tolist()
         self.day_night_data = df_env['day_night'].tolist()
+        self.date_time_data = df_env['date_time']
 
         # these parameters we get from the environmental data input
         self.time_in_cycle = None
@@ -192,6 +194,9 @@ class OystercatcherModel(Model):
         # get new waterheight and patch availability
         self.waterheight = self.waterheight_data[time_step]
 
+        # date time
+        self.date_time = self.date_time_data[time_step]
+
         # check day or night
         self.day_night = self.day_night_data[time_step]
 
@@ -227,11 +232,7 @@ class OystercatcherModel(Model):
             self.cockle_sizes = self.CockFWtoSizeA * (self.cockle_fresh_weight ** self.CockFWtoSizeB)
             self.handling_time_cockles = self.calculate_handling_time_cockles(self.cockle_sizes)
 
-            # todo data collection
-            self.cockle_fresh_weight_list.append(self.cockle_fresh_weight[:, 0][-1])
-            self.cockle_wet_weight_list.append(self.cockle_wet_weight[:, 0][-1])
-            self.mussel_weight_list.append(self.mussel_wet_weight)
-            self.cockle_sizes_list.append(self.cockle_sizes[:, 0][-1])
+
 
         # calculate intake rate for mussel patches (without interference)
         self.mussel_potential_wtw_intake, self.mussel_potential_energy_intake = self.mussel_potential_intake()
@@ -241,15 +242,18 @@ class OystercatcherModel(Model):
         self.energy_intake_mac, self.capture_rates_mudflats \
             = self.mudflats_potential_intake()
 
-        # calculate intake on grassland
-        # self.grassland_potential_wtw_intake, self.grassland_potential_energy_intake = self.grassland_potential_intake() # todo: dit hoeft niet elke keer berekent te worden, scheelt 5 seconden
 
-        # execute model.step (move agents and let them eat) todo: pas schedule aan
+
+        # execute model.step (move agents and let them eat)
         self.schedule.step()
+
+        # at the end of the tidal cycle todo: check if position is correct
+        if self.time_in_cycle == self.total_number_steps_in_cycle - 1:
+            self.collect_data()
+
         self.time_in_cycle += 1 # time STEPS in cycle
 
-        # maak paar datacollectie functies en roep die aan
-        # todo maak defaultdict for data collection
+
 
         self.new_tidal_cycle = False
         # print(self.num_agents_on_patches)
@@ -265,6 +269,38 @@ class OystercatcherModel(Model):
             self.step()
 
         print("Final number of birds: {}".format(self.schedule.get_agent_count()))
+
+    def collect_data(self):
+
+        # list of all agents
+        worm_specialists = [agent for agent in self.schedule.agents if agent.specialization == 'worm']
+        shellfish_specialists = [agent for agent in self.schedule.agents if agent.specialization == 'shellfish']
+
+        # calculate number of agents in model
+        self.data['total_num_agents'].append(len(self.schedule.agents))
+
+        # calculate mean weight of diet specialization groups
+        mean_weight_w = np.mean([agent.weight for agent in worm_specialists])
+        mean_weight_s = np.mean([agent.weight for agent in shellfish_specialists])
+        # mean_weight_w_std = np.std([agent.weight for agent in self.schedule.agents if agent.specialization == 'worm'])
+        # mean_weight_s_std = np.std([agent.weight for agent in self.schedule.agents if agent.specialization == 'shellfish'])
+        self.data['mean_weight_w'].append(mean_weight_w)
+        self.data['mean_weight_s'].append(mean_weight_s)
+
+        # calculate mean foraging time (in hours)
+        mean_foraging_w = np.mean([agent.time_foraged for agent in worm_specialists]) * self.resolution_min / 60
+        mean_foraging_s = np.mean([agent.time_foraged for agent in shellfish_specialists]) * self.resolution_min / 60
+
+        self.data['mean_foraging_w'].append(mean_foraging_w)
+        self.data['mean_foraging_s'].append(mean_foraging_s)
+
+        # todo: op laatste tijdstap eindgewicht
+
+        # todo: deze ook in defaultdict opslaan
+        self.cockle_fresh_weight_list.append(self.cockle_fresh_weight[:, 0][-1])
+        self.cockle_wet_weight_list.append(self.cockle_wet_weight[:, 0][-1])
+        self.mussel_weight_list.append(self.mussel_wet_weight)
+        self.cockle_sizes_list.append(self.cockle_sizes[:, 0][-1])
 
     @staticmethod
     def calculate_handling_time_cockles(cockle_size):

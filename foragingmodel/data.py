@@ -40,7 +40,7 @@ def get_patch_data(start_year): #todo: add grass & roost patch
 
     Note that grasspatch should be included in data
     """
-    path = 'C:/Users/Marleen/Documents/thesis project/Data zaken/Data/Patch data/Patch_Info_Vlieland_{}.csv'.format(start_year)
+    path = '../Input data/Patch_Info_Vlieland_{}.csv'.format(start_year)
     df_patches = pd.read_csv(path, delimiter=",")
 
     # select columns to use
@@ -61,6 +61,10 @@ def get_patch_data(start_year): #todo: add grass & roost patch
 
     # add grasspatch (deleted due to zero entries)
     df_patches = df_patches.append(grasspatch)
+
+    # correct for mussel cover
+    df_patches['area'] = np.where(df_patches.type == 'Bed', df_patches['area'] * (df_patches.musselcover / 100),
+                                  df_patches['area'])
 
     # sort on patch id and reset index
     df_patches = df_patches.sort_values('type')
@@ -99,7 +103,7 @@ def get_environmental_data(start_year):
     """
 
     # location of environmental data todo: dit ook in data.py zetten? en alleen startjaar meegevem?
-    env_data_dir = 'C:/Users/Marleen/Documents/thesis project/oystercatcher-model/Input data/'
+    env_data_dir = '../Input data/'
     env_data_filename = '{}_9_1_to_{}_3_1.pkl'.format(start_year, start_year + 1)
     env_data_path = env_data_dir + env_data_filename
     df_env = pd.read_pickle(env_data_path)
