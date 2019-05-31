@@ -120,7 +120,7 @@ def get_patch_availability(start_year, patchIDs): #todo: add grass roost patch
     """
 
     # get data and remove unnessecary column
-    path = 'C:/Users/Marleen/Documents/thesis project/Data zaken/Data/Patch data/Patch_Exposure_Vlieland_{}.csv'.\
+    path = '../Input data/Patch_Exposure_Vlieland_{}.csv'.\
         format(start_year)
     df_patch_availability_data = pd.read_csv(path, delimiter=",")
     del df_patch_availability_data['Unnamed: 0']
