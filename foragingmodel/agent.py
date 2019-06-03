@@ -155,6 +155,7 @@ class Bird:
             # intake rate grasslands (independent of available area)
             if self.model.patch_types[self.pos] == "Grassland":
 
+
                 # intake rate becomes zero at low temperatures
                 if (self.model.temperature < 0) | (self.model.day_night == 'N'):
                     wtw_intake, energy_intake = [0, 0]

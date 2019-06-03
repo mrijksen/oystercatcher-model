@@ -9,7 +9,7 @@ init_birds = 100	# number of birds on September, 1
 
 resolution_min = 30 	# time step size in minutes
 
-# IR at which 623g bird with mean effic needs 12 hours of foraging 
+# IR at which 623g bird with mean efficienty needs 12 hours of foraging 
 leaving_threshold = 0.02045685 # kJ/s
 
 

@@ -27,10 +27,10 @@ class OystercatcherModel(Model):
         """
         super().__init__()
 
-        # SA parameters
+        # SA parameters todo: put in param file
         self.relative_density = 1
         self.relative_threshold = 1
-        self.agg_factor_mudflats = 10 # todo: implement this
+        self.agg_factor_mudflats = 8
         self.agg_factor_bed = 8
 
         # get data files
@@ -276,7 +276,9 @@ class OystercatcherModel(Model):
         worm_specialists = [agent for agent in self.schedule.agents if agent.specialization == 'worm']
         shellfish_specialists = [agent for agent in self.schedule.agents if agent.specialization == 'shellfish']
 
-        # calculate number of agents in model
+        # calculate number of agents
+        self.data['total_num_w'].append(len(worm_specialists))
+        self.data['total_num_s'].append(len(shellfish_specialists))
         self.data['total_num_agents'].append(len(self.schedule.agents))
 
         # calculate mean weight of diet specialization groups

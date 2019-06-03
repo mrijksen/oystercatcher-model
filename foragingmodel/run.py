@@ -67,7 +67,7 @@ if __name__ == "__main__":
     df_high_water.reset_index(inplace=True)
 
     # plot reference weight from data, weight from simulation, foragingtime, temperature?
-    fig, ax = plt.subplots(4, 1)
+    fig, ax = plt.subplots(5, 1)
     ax[0].plot(df_high_water.weight,  color='purple', label="reference weight")
     ax[0].set_title('Weight')
     # ax[0].plot( model.schedule.agents[0].weight_throughout_cycle, label="actual weight")
@@ -101,6 +101,8 @@ if __name__ == "__main__":
     ax[3].set_title('Temperature')
     ax[3].set_xlabel('Month')
     ax[3].set_ylabel('Degrees Celsius')
+
+    ax[4].plot(model.data['total_num_agents'])
 
     # ax[4].plot(model.schedule.agents[0].start_foraging_list)
     fig.suptitle('Year {}/{}, number of agents: {}, standard params'.format(start_year, start_year + 1, 1000))
