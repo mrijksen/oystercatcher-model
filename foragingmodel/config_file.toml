@@ -4,13 +4,19 @@
 
 # -------------------------- Initialisation parameters ------------------------------------ #
 
-init_birds = 100	# number of birds on September, 1
+resolution_min = 30 		# time step size in minutes
+init_birds = 7000			# number of birds on September, 1
+
 # include distributions for bird initialisation here as well 
 
-resolution_min = 30 	# time step size in minutes
+
 
 # IR at which 623g bird with mean efficienty needs 12 hours of foraging 
 leaving_threshold = 0.02045685 # kJ/s
+
+time_foraged_init = 8 		# time foraged in previous cycle
+init_stomach_content = 0	# stomach content, g
+start_weight = 548.9		# start weight of bird (reference weight on sept 1, g)
 
 
 # ----------------------------------- Prey Characteristics -------------------------------- #
@@ -23,14 +29,44 @@ RatioAFDWtoWet = 0.16 		# afdw per g wtw	ZwartEnsDurellEtAl1996
 CockFWtoSizeA = 14.610 		# Ens
 CockFWtoSizeB = 0.317766
 
+# conversion wet weight to afdw for worms
+conversion_afdw_wtw = 0.17 	# conversion from thesis Jeroen Onrust
+
 # mussel data
 mussel_density = 99999 		# infinite density
 mussel_wtw_gain = -0.0025 	# wtw gain per day, GossCustard2001
 mussel_afdw = 0.85 			# start weight, g AFDW GossCustard2001
 
 
+# ----------------------------- Functional Response Parameters ---------------------------- #
+
+# handling time cockles
+leoA = 0.000860373					# Zwarts et al.(1996b), taken from WEBTICS
+leoB = 0.220524 			
+leoC = 1.79206
+
+# functional response mudflats
+hiddinkA = 0.000625					# Hiddink, 2003
+hiddinkB = 0.000213					# handling parameter
+
+# functional response mussel
+attack_rate = 0.00057  				# mosselA in webtics
+mussel_intake_rate_A = 0.092  		# parameters for max intake rate (plateau)
+mussel_intake_rate_B = 0.506
+
+
 # ----------------------- Food digestion and assimilation parameters ---------------------- #
 
-FractionTakenUp = 0.85	# Speakman1987,KerstenVisser1996,KerstenPiersma1987,ZwartsBlomert1996
+# fraction prey taken up from stomach and left over fraction
 LeftOverShellfish = 0.1 # ZwartEnsKerstenetal1996
+FractionTakenUp = 0.85	# Speakman1987,KerstenVisser1996,KerstenPiersma1987,ZwartsBlomert1996
 
+# stomach content and digestion rates
+
+
+# ----------------------------- Sensitivity Analysis Parameters --------------------------- #
+
+relative_density = 1 		# relative prey density
+relative_threshold = 1		# relative leaving_threshold
+agg_factor_mudflats = 0 	# aggregation factor on mudflats
+agg_factor_bed = 8			# aggregation factor on mussel beds

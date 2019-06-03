@@ -27,18 +27,20 @@ class OystercatcherModel(Model):
         """
         super().__init__()
 
-        # SA parameters todo: put in param file
-        self.relative_density = 1
-        self.relative_threshold = 1
-        self.agg_factor_mudflats = 8
-        self.agg_factor_bed = 8
+        # SA parameters
+        self.relative_density = params["relative_density"]
+        self.relative_threshold = params["relative_threshold"]
+        self.agg_factor_mudflats = params["agg_factor_mudflats"]
+        self.agg_factor_bed = params["agg_factor_bed"]
 
         # get data files
         self.patch_data = df_patch_data
         self.df_env = df_env
         self.df_patch_availability = df_patch_availability
 
-        # set parameters #todo: zet in param file
+        self.params = params
+
+        # set parameters
         self.init_birds = params["init_birds"]
         self.resolution_min = params["resolution_min"] # time step size # todo: calculate with input data
 
@@ -50,6 +52,17 @@ class OystercatcherModel(Model):
 
         self.FractionTakenUp = params["FractionTakenUp"]  # Speakman1987, KerstenVisser1996, KerstenPiersma1987, ZwartsBlomert1996
         self.LeftOverShellfish = params["LeftOverShellfish"]  # ZwartEnsKerstenetal1996
+
+        self.leoA = params["leoA"]
+        self.leoB = params["leoB"]  # Zwarts et al.(1996b)
+        self.leoC = params["leoC"]
+
+        self.hiddinkA = params["hiddinkA"]
+        self.hiddinkB = params["hiddinkB"]
+
+        self.attack_rate = params["attack_rate"]
+        self.mussel_intake_rate_A = params["mussel_intake_rate_A"]
+        self.mussel_intake_rate_B = params["mussel_intake_rate_B"]
 
         # threshold to leave patch
         self.leaving_threshold = params["leaving_threshold"] * self.relative_threshold
@@ -216,7 +229,7 @@ class OystercatcherModel(Model):
             self.reference_weight_birds = self.weight_data[time_step]
             self.total_number_steps_in_cycle = self.steps_in_cycle_data[time_step]
             self.steps_to_low_tide = self.steps_low_tide_data[time_step]
-            self.temperature = self.temperature_data[time_step]
+            self.temperature = self.temperature_data[time_step] - 2
             self.proportion_macoma = self.proportion_macoma_data[time_step]
 
             # calculate new fresh weight cockles for 1y and 2y cockles
@@ -304,16 +317,11 @@ class OystercatcherModel(Model):
         self.mussel_weight_list.append(self.mussel_wet_weight)
         self.cockle_sizes_list.append(self.cockle_sizes[:, 0][-1])
 
-    @staticmethod
-    def calculate_handling_time_cockles(cockle_size):
+    def calculate_handling_time_cockles(self, cockle_size):
         """ Helper method to calculate the handling time for each cockle size class
         :param cockle_size: size of cockle in mm
         """
-        # parameters
-        # leoA = 0.000860373# Zwarts et al. (1996b), taken from WEBTICS
-        leoB = 0.220524 # Zwarts et al.(1996b)
-        leoC = 1.79206
-        return leoB * (cockle_size ** leoC)
+        return self.leoB * (cockle_size ** self.leoC)
 
     def calculate_handling_time_macoma(self): # todo: gewicht voor macoma balthica verschilt per patch
         """ Helper method to calculate handling time for macoma balthica.
@@ -322,11 +330,7 @@ class OystercatcherModel(Model):
 
             The input should be given in g! not mg.
         """
-
-        # parameters
-        hiddinkA = 0.000625     # by Hiddink2003
-        hiddinkB = 0.000213     # handling parameter (Hiddink2003)
-        return (hiddinkB / hiddinkA) * (1000 * self.macoma_wet_weight * self.RatioAFDWtoWet)
+        return (self.hiddinkB / self.hiddinkA) * (1000 * self.macoma_wet_weight * self.RatioAFDWtoWet)
 
     def mussel_potential_intake(self):  #todo: in agent zelf opnieuw E intake berekenen op basis v beschikbare maaginhoud
         """
@@ -351,8 +355,7 @@ class OystercatcherModel(Model):
                         * self.AFDWenergyContent
         return total_intake_wtw, energy_intake
 
-    @staticmethod
-    def functional_response_mussel(mussel_density, mussel_afdw):
+    def functional_response_mussel(self, mussel_density, mussel_afdw):
         """
         Functional response as described in WEBTICS. They converted
         the intake of stillman to a capture rate.
@@ -361,17 +364,12 @@ class OystercatcherModel(Model):
         :return: capture rate in # prey/ s
         """
 
-        # parameters todo: in parameter file
-        attack_rate = 0.00057  # mosselA in webtics
-        mussel_intake_rate_A = 0.092  # parameters for max intake rate (plateau)
-        mussel_intake_rate_B = 0.506
-
         # calculate plateau of functional response mussel #todo: is de IR niet gewoon dit plateau?
-        max_intake_rate = mussel_intake_rate_A * (mussel_afdw * 1000) ** mussel_intake_rate_B
+        max_intake_rate = self.mussel_intake_rate_A * (mussel_afdw * 1000) ** self.mussel_intake_rate_B
 
         # calculate handling time and capture rate
         handling_time = (mussel_afdw * 1000) / max_intake_rate  # convert prey to mg
-        capture_rate = (attack_rate * mussel_density) / (1 + attack_rate * handling_time * mussel_density)
+        capture_rate = (self.attack_rate * mussel_density) / (1 + self.attack_rate * handling_time * mussel_density)
         return capture_rate
 
     def mudflats_potential_intake(self):
@@ -414,18 +412,10 @@ class OystercatcherModel(Model):
                                capture_rate_kok2 * conversion_s_to_timestep,
                                capture_rate_kokmj * conversion_s_to_timestep,
                                capture_rate_mac * conversion_s_to_timestep]
-
-        # # if available area is zero, potential intake is zero as well
-        # mask = [self.available_areas == 0][0]
-        # total_intake_wtw[mask] = 0
-        # energy_intake[mask] = 0
-        # energy_intake_cockle[mask] = 0
-        # energy_intake_mac[mask] = 0
-        # total_captured_prey[mask] = 0
         return total_intake_wtw, energy_intake, energy_intake_cockle, energy_intake_mac, total_captured_prey
 
-    @staticmethod
-    def functional_response_mudflats(handling_time_cockles, cockle_densities, handling_time_mac, mac_density,
+
+    def functional_response_mudflats(self, handling_time_cockles, cockle_densities, handling_time_mac, mac_density,
                                      proportion_macoma):
         """
         Functional response as described in webtics.
@@ -441,22 +431,16 @@ class OystercatcherModel(Model):
         kok2_density = cockle_densities[:, 1]
         kokmj_density = cockle_densities[:, 2]
 
-        # parameters todo: zet in parameter file
-        leoA = 0.000860373  # Zwarts et al. (1996b), taken from WEBTICS
-        leoB = 0.220524  # Zwarts et al.(1996b)
-        hiddinkA = 0.000625  # Hiddink2003
-        # attack_rate = leoA * leoB
-
         # calculate capture rate for every cockle size class (number of cockles/s)
-        capture_rate_kok1_num = leoA * kok1_density  # numerator of eq 5.9 webtics
-        capture_rate_kok1_den = leoA * kok1_handling_time * kok1_density  # denominator without 1 +
-        capture_rate_kok2_num = leoA * kok2_density
-        capture_rate_kok2_den = leoA * kok2_handling_time * kok2_density
-        capture_rate_kokmj_num = leoA * kokmj_density
-        capture_rate_kokmj_den = leoA * kokmj_handling_time * kokmj_density
+        capture_rate_kok1_num = self.leoA * kok1_density  # numerator of eq 5.9 webtics
+        capture_rate_kok1_den = self.leoA * kok1_handling_time * kok1_density  # denominator without 1 +
+        capture_rate_kok2_num = self.leoA * kok2_density
+        capture_rate_kok2_den = self.leoA * kok2_handling_time * kok2_density
+        capture_rate_kokmj_num = self.leoA * kokmj_density
+        capture_rate_kokmj_den = self.leoA * kokmj_handling_time * kokmj_density
 
         # capture rate macoma
-        capture_rate_mac_num = hiddinkA * mac_density * proportion_macoma  # only take available macoma into account
+        capture_rate_mac_num = self.hiddinkA * mac_density * proportion_macoma  # only take available macoma into account
         capture_rate_mac_den = capture_rate_mac_num * handling_time_mac
 
         # final denominator 5.9 webtics
@@ -479,8 +463,8 @@ class OystercatcherModel(Model):
         Returns the wet weight consumed (g) and the energy consumed (kJ) per time step.
         """
 
-        # parameters todo: zet in file
-        conversion_afdw_wtw = 0.17 # conversion from thesis Jeroen Onrust
+        # parameters
+        conversion_afdw_wtw = self.params["conversion_afdw_wtw"]
 
         # intake from Stillman (also used in webtics)
         afdw_intake_grassland = (0.53 * 60 * self.resolution_min) / 1000 # g / time step, Stillman2000

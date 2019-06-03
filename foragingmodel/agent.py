@@ -22,13 +22,13 @@ class Bird:
         self.worm_foraging_eff = worm_foraging_efficiency
 
         # initial foraging parameters
-        self.start_foraging = None # number of steps after high tide
-        self.time_foraged = 6 #todo: welke initialisatie waarde ? let op tijdstap (dit is niet in uur)
+        self.start_foraging = None # number of steps after high tide todo: deze kan weg
+        self.time_foraged = self.model.params["time_foraged_init"] #todo: welke initialisatie waarde ? let op tijdstap (dit is niet in uur)
         self.goal_reached = True
 
         # stomach, weight, energy goal
-        self.stomach_content = 0 # g todo: waarmee initialiseren?
-        self.weight = 548.9 # reference weight on sept 1, g
+        self.stomach_content = self.model.params["init_stomach_content"] # g todo: waarmee initialiseren?
+        self.weight = self.model.params["start_weight"] # reference weight on sept 1, g
         self.energy_goal = None #kJ
         self.energy_gain = 0 # energy already foraged kJ
 
