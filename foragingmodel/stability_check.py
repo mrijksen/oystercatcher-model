@@ -34,6 +34,10 @@ def initiate_model(start_year):
 
 def get_model_data(model):
 
+    # start number of diet specialists
+    start_num_w = model.data['total_num_w'][0]
+    start_num_s = model.data['total_num_s'][0]
+
     # final number of diet specialists
     final_num_w = model.data['total_num_w'][-1]
     final_num_s = model.data['total_num_s'][-1]
@@ -41,7 +45,7 @@ def get_model_data(model):
     # mean foraging time of diet specialists
     final_mean_foraging_w = np.mean(model.data['mean_foraging_w'])
     final_mean_foraging_s = np.mean(model.data['mean_foraging_s'])
-    return [final_num_w, final_num_s, final_mean_foraging_w, final_mean_foraging_s]
+    return [start_num_w, start_num_s, final_num_w, final_num_s, final_mean_foraging_w, final_mean_foraging_s]
 
 def run_model(i):
 
