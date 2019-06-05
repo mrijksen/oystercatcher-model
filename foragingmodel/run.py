@@ -3,7 +3,7 @@ from oystercatchermodel import OystercatcherModel
 import matplotlib.pyplot as plt
 import numpy as np
 import time
-
+import pickle
 
 
 def initiate_model(start_year, run_type='real_data'):
@@ -44,7 +44,7 @@ def initiate_model(start_year, run_type='real_data'):
 if __name__ == "__main__":
 
     # run parameters
-    start_year = 2017
+    start_year = 1996
     artificial_run = False
 
     if artificial_run:
@@ -63,13 +63,18 @@ if __name__ == "__main__":
     print(end_time - start_time, "TIME")
     print(len(model.schedule.agents), "number of agents left")
 
+    # save results in file
+    output = open('../results/single_simulation_runs/{}_10000agents_newrule_0agg.pkl'.format(start_year), 'wb')
+    pickle.dump(model.data, output)
+    output.close()
+
     df_high_water = model.df_env[model.df_env.extreem == 'HW']
     df_high_water.reset_index(inplace=True)
 
     # plot reference weight from data, weight from simulation, foragingtime, temperature?
-    fig, ax = plt.subplots(5, 1)
+    fig, ax = plt.subplots(4, 1)
     ax[0].plot(df_high_water.weight,  color='purple', label="reference weight")
-    ax[0].set_title('Weight')
+    ax[0].set_title('Mean weight')
     # ax[0].plot( model.schedule.agents[0].weight_throughout_cycle, label="actual weight")
     ax[0].plot(np.array(model.data['mean_weight_w']), markersize=2, label='worm')
     ax[0].plot(np.array(model.data['mean_weight_s']), markersize=2, label='shellfish')
@@ -102,10 +107,10 @@ if __name__ == "__main__":
     ax[3].set_xlabel('Month')
     ax[3].set_ylabel('Degrees Celsius')
 
-    ax[4].plot(model.data['total_num_agents'])
+    # ax[4].plot(model.data['total_num_agents'])
 
     # ax[4].plot(model.schedule.agents[0].start_foraging_list)
-    fig.suptitle('Year {}/{}, number of agents: {}, standard params'.format(start_year, start_year + 1, 1000))
+    # fig.suptitle('Year {}/{}, number of agents: {}, aggregation factor mudflats 0'.format(start_year, start_year + 1, 7000))
 
 
     fig.tight_layout()

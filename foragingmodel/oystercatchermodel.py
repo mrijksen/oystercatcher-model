@@ -12,7 +12,7 @@ from collections import defaultdict
 import numpy as np
 import random
 
-np.seterr(divide='ignore')
+np.seterr(divide='ignore', invalid='ignore')
 
 
 class OystercatcherModel(Model):
@@ -81,8 +81,6 @@ class OystercatcherModel(Model):
         self.patch_indices_beds = np.where(self.patch_types == "Bed")[0]
         self.patch_max_bed_index = np.max(self.patch_indices_beds)
         self.patch_index_grassland = np.where(self.patch_types == "Grassland")[0]
-
-
 
         # cockle data
         self.cockle_fresh_weight = df_patch_data[['Cockle_1j_FW',
@@ -170,25 +168,24 @@ class OystercatcherModel(Model):
             sex = np.random.choice(['male', 'female'], p=[0.55, 0.45])
             if sex == 'male':
                 specialization = np.random.choice(['worm', 'shellfish'], p=[0.23, 0.77])
-                # specialization = 'worm'
             elif sex == 'female':
                 specialization = np.random.choice(['worm', 'shellfish'], p=[0.66, 0.34])
-                # specialization = 'worm'
+
             # dominance
             dominance = np.random.randint(1, 101)
 
             # foraging efficiency and position for specializations for different prey
             if specialization == 'worm':
-                mussel_foraging_efficiency = 0
-                cockle_foraging_efficiency = np.random.normal(0.8, 0.1)
-                macoma_foraging_efficiency = np.random.normal(1, 0.1)
-                worm_foraging_efficiency = np.random.normal(1, 0.1)
+                mussel_foraging_efficiency = self.params["w_mussel_foraging_efficiency"]
+                cockle_foraging_efficiency = np.random.normal(self.params["w_cockle_foraging_mean"], 0.1)
+                macoma_foraging_efficiency = np.random.normal(self.params["w_macoma_foraging_mean"], 0.1)
+                worm_foraging_efficiency = np.random.normal(self.params["w_worm_foraging_efficiency"], 0.1)
                 pos = np.random.choice(possible_positions_worm)
             elif specialization == 'shellfish':
-                mussel_foraging_efficiency = np.random.normal(1, 0.1)
-                cockle_foraging_efficiency = np.random.normal(1, 0.1)
-                macoma_foraging_efficiency = np.random.normal(0.8, 0.1)
-                worm_foraging_efficiency = 0
+                mussel_foraging_efficiency = np.random.normal(self.params["s_mussel_foraging_mean"], 0.1)
+                cockle_foraging_efficiency = np.random.normal(self.params["s_cockle_foraging_mean"], 0.1)
+                macoma_foraging_efficiency = np.random.normal(self.params["s_macoma_foraging_mean"], 0.1)
+                worm_foraging_efficiency = self.params["s_worm_foraging_efficiency"]
                 pos = np.random.choice(possible_positions_shellfish)
 
             # instantiate bird class
@@ -213,7 +210,7 @@ class OystercatcherModel(Model):
         # check day or night
         self.day_night = self.day_night_data[time_step]
 
-        # calculate available area for every patch
+        # calculate available area for every patch todo: change to fraction "just" available
         self.available_areas = self.df_patch_availability.loc[self.waterheight].values * self.patch_areas
 
         # calculate new mussel weight
@@ -297,17 +294,22 @@ class OystercatcherModel(Model):
         # calculate mean weight of diet specialization groups
         mean_weight_w = np.mean([agent.weight for agent in worm_specialists])
         mean_weight_s = np.mean([agent.weight for agent in shellfish_specialists])
-        # mean_weight_w_std = np.std([agent.weight for agent in self.schedule.agents if agent.specialization == 'worm'])
-        # mean_weight_s_std = np.std([agent.weight for agent in self.schedule.agents if agent.specialization == 'shellfish'])
+        mean_weight_w_std = np.std([agent.weight for agent in self.schedule.agents if agent.specialization == 'worm'])
+        mean_weight_s_std = np.std([agent.weight for agent in self.schedule.agents if agent.specialization == 'shellfish'])
         self.data['mean_weight_w'].append(mean_weight_w)
         self.data['mean_weight_s'].append(mean_weight_s)
+        self.data['mean_weight_w_std'].append(mean_weight_w_std)
+        self.data['mean_weight_s_std'].append(mean_weight_s_std)
 
         # calculate mean foraging time (in hours)
         mean_foraging_w = np.mean([agent.time_foraged for agent in worm_specialists]) * self.resolution_min / 60
         mean_foraging_s = np.mean([agent.time_foraged for agent in shellfish_specialists]) * self.resolution_min / 60
-
+        mean_foraging_w_std = np.std(np.array([agent.time_foraged for agent in worm_specialists]) * self.resolution_min / 60)
+        mean_foraging_s_std = np.std(np.array([agent.time_foraged for agent in shellfish_specialists]) * self.resolution_min / 60)
         self.data['mean_foraging_w'].append(mean_foraging_w)
         self.data['mean_foraging_s'].append(mean_foraging_s)
+        self.data['mean_foraging_w_std'].append(mean_foraging_w_std)
+        self.data['mean_foraging_s_std'].append(mean_foraging_s_std)
 
         # todo: op laatste tijdstap eindgewicht
 

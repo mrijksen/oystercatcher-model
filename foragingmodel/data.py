@@ -104,7 +104,7 @@ def get_environmental_data(start_year):
 
     # location of environmental data todo: dit ook in data.py zetten? en alleen startjaar meegevem?
     env_data_dir = '../Input data/'
-    env_data_filename = '{}_9_1_to_{}_3_1.pkl'.format(start_year, start_year + 1)
+    env_data_filename = '{}_9_1_to_{}_3_16.pkl'.format(start_year, start_year + 1)
     env_data_path = env_data_dir + env_data_filename
     df_env = pd.read_pickle(env_data_path)
     return df_env
