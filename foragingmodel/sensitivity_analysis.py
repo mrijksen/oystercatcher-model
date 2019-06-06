@@ -11,7 +11,7 @@ import toml
 
 N = 5
 p = .25
-fname = "../results/sensitivity_test.txt"
+fname = "../results/sensitivity_standardparams_25percent.txt"
 standard_params = toml.load("config_file.toml")
 
 
