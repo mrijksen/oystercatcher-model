@@ -4,9 +4,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 import multiprocessing
+import toml
 
-fname = "../results/stability_standardparams.txt"
-N = 5   # number of model runs in total
+fname = "../results/stability_16agg_mud_bed_0_6_threshold_0_5_reldensity_10000agents.txt"
+N = 100   # number of model runs in total
 out = 6  # number of model results
 
 def initiate_model(start_year):
@@ -14,7 +15,7 @@ def initiate_model(start_year):
     """ Instantiate model class """
 
     # get parameters
-    params = data.get_params()
+    params = toml.load("config_file.toml")
 
     # load real patch data
     df_patch_data = data.get_patch_data(start_year)
@@ -45,7 +46,11 @@ def get_model_data(model):
     # mean foraging time of diet specialists
     final_mean_foraging_w = np.mean(model.data['mean_foraging_w'])
     final_mean_foraging_s = np.mean(model.data['mean_foraging_s'])
-    return [start_num_w, start_num_s, final_num_w, final_num_s, final_mean_foraging_w, final_mean_foraging_s]
+    
+    # get mean weight
+    final_mean_weight_w = np.mean(model.data['mean_weight_w'])
+    final_mean_weight_s = np.mean(model.data['mean_weight_s'])
+    return [start_num_w, start_num_s, final_num_w, final_num_s, final_mean_foraging_w, final_mean_foraging_s, final_mean_weight_w, final_mean_weight_s]
 
 def run_model(i):
 
@@ -58,7 +63,7 @@ def run_model(i):
 
     model_output = get_model_data(model)
 
-    print("Finishing sensitivity run {} out of {}".format(i + 1, N))
+    print("Finishing stability run {} out of {}".format(i + 1, N))
     return model_output
 
 
@@ -66,7 +71,7 @@ if __name__ == '__main__':
 
     # run the model in parallel
     starttime = time.time()
-    pool = multiprocessing.Pool(processes=8)
+    pool = multiprocessing.Pool(processes=10)
     results = pool.map(run_model, range(N))
     pool.close()
     print('That took {} seconds'.format(time.time() - starttime))

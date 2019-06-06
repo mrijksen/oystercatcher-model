@@ -98,7 +98,7 @@ metabolic_b = 1.489
 
 # ----------------------------- Sensitivity Analysis Parameters --------------------------- #
 
-relative_density = 1 		# relative prey density
-relative_threshold = 1		# relative leaving_threshold
-agg_factor_mudflats = 1 	# aggregation factor on mudflats
-agg_factor_bed = 1			# aggregation factor on mussel beds
+relative_density = 0.5 		# relative prey density
+relative_threshold = 0.6		# relative leaving_threshold
+agg_factor_mudflats = 16 	# aggregation factor on mudflats
+agg_factor_bed = 16			# aggregation factor on mussel beds

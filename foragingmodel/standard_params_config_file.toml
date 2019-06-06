@@ -1,14 +1,22 @@
 ## Foragingmodel Parameter File ##
 
 
-
 # -------------------------- Initialisation parameters ------------------------------------ #
 
 resolution_min = 30 		# time step size in minutes
-init_birds = 7000			# number of birds on September, 1
+init_birds = 10000			# number of birds on September, 1
 
-# include distributions for bird initialisation here as well 
+# worm specialist distributions 
+w_mussel_foraging_efficiency = 0
+w_cockle_foraging_mean = 0.8
+w_macoma_foraging_mean = 1
+w_worm_foraging_efficiency = 1
 
+# shellfish specialist distributions
+s_mussel_foraging_mean = 1
+s_cockle_foraging_mean = 1
+s_macoma_foraging_mean = 0.8
+s_worm_foraging_efficiency = 0
 
 
 # IR at which 623g bird with mean efficienty needs 12 hours of foraging 
@@ -55,6 +63,18 @@ mussel_intake_rate_A = 0.092  		# parameters for max intake rate (plateau)
 mussel_intake_rate_B = 0.506
 
 
+# --------------------------------- Interference Parameters ------------------------------- #
+
+# interference on mudflats
+attack_distance = 2.0  			# webtics, stillman 2002
+alpha = 0.4  					# fitted parameter by webtics
+
+# interference on mussel beds, Stillman1996
+competitors_threshold = 158 	# density of competitors above which interference occurs ha-1
+a = 0.437 						# parameters for stabbers 
+b = -0.00721
+
+
 # ----------------------- Food digestion and assimilation parameters ---------------------- #
 
 # fraction prey taken up from stomach and left over fraction
@@ -62,7 +82,18 @@ LeftOverShellfish = 0.1 # ZwartEnsKerstenetal1996
 FractionTakenUp = 0.85	# Speakman1987,KerstenVisser1996,KerstenPiersma1987,ZwartsBlomert1996
 
 # stomach content and digestion rates
+max_digestive_rate = 0.263 			# g WtW / min, KerstenVisser1996
+deposition_efficiency = 0.75		# WEBTICS page 57
+BodyGramEnergyCont = 34.295  		# kJ/gram fat, conversion fat to energy
+BodyGramEnergyReq = 45.72666666		# kJ/gram (25% larger) conversion energy to fat
+minimum_weight = 450				# g
+max_stomach_content = 80 			# g WtW KerstenVisser1996
 
+# energy requirements
+thermo_a = 904     		# kerstenpiersma 1987 kJ/day
+thermo_b = 30.3
+metabolic_a = 0.061 	# zwartsenskerstenetal1996 kJ/day
+metabolic_b = 1.489
 
 # ----------------------------- Sensitivity Analysis Parameters --------------------------- #
 
