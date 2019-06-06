@@ -311,7 +311,11 @@ class OystercatcherModel(Model):
         self.data['mean_foraging_w_std'].append(mean_foraging_w_std)
         self.data['mean_foraging_s_std'].append(mean_foraging_s_std)
 
-        # todo: op laatste tijdstap eindgewicht
+        # calculate deviation from reference weight (mean sum of squares)
+        self.data['mean_sum_squares_weight_w'].append(np.sum([((agent.weight - self.reference_weight_birds) ** 2)
+                                                              for agent in worm_specialists]) / len(worm_specialists))
+        self.data['mean_sum_squares_weight_s'].append(np.sum([((agent.weight - self.reference_weight_birds) ** 2)
+                                                              for agent in shellfish_specialists]) / len(shellfish_specialists))
 
         # todo: deze ook in defaultdict opslaan
         self.cockle_fresh_weight_list.append(self.cockle_fresh_weight[:, 0][-1])

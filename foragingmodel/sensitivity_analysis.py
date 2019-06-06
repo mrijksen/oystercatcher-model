@@ -9,16 +9,13 @@ import time
 import multiprocessing
 import toml
 
-N = 2
+N = 5
 p = .25
 fname = "../results/sensitivity_test.txt"
-# get standard parameters
 standard_params = toml.load("config_file.toml")
 
 
-
 def initiate_model(start_year, i):
-
     """ Instantiate model class """
 
     model_params = standard_params.copy()
@@ -26,7 +23,6 @@ def initiate_model(start_year, i):
     # replace value in final parameter file
     for var, val in zip(vars, param_set_vals[i]):
         model_params[var] = val
-    print(model_params)
 
     # load real patch data
     df_patch_data = data.get_patch_data(start_year)
@@ -85,8 +81,9 @@ def run_model(i):
 
     model_output = get_model_data(model)
 
-    print("Finishing stability run {} out of {}".format(i + 1, N))
+    print("Finishing sensitivity run {} out of {}".format(i + 1, N))
     return model_output
+
 
 def create_parameter_set(standard_params):
 
@@ -128,8 +125,11 @@ def create_parameter_set(standard_params):
             param_sets.append(new_set)
 
     # this is our final set!
-    param_sets_vals = np.array(param_sets)
-    return vars, param_sets_vals
+    final_param_set = np.array(param_sets)
+
+    # return the set as well as the value keys
+    return vars, final_param_set
+
 
 # get parameter set
 vars, param_set_vals = create_parameter_set(standard_params)
@@ -138,7 +138,7 @@ if __name__ == '__main__':
 
     # run the model in parallel
     starttime = time.time()
-    pool = multiprocessing.Pool(processes=20)
+    pool = multiprocessing.Pool(processes=40)
     results = pool.map(run_model, range(len(param_set_vals)))
     pool.close()
     print('That took {} seconds'.format(time.time() - starttime))
