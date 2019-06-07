@@ -95,7 +95,9 @@ def create_extra_parameter_set(standard_params):
             'w_worm_foraging_efficiency',
             's_mussel_foraging_mean',
             's_cockle_foraging_mean',
-            's_macoma_foraging_mean']
+            's_macoma_foraging_mean',
+            'agg_factor_mudflats',
+            'agg_factor_bed']
 
     # get standard parameter values
     params = {var: params[var] for var in vars}
@@ -113,6 +115,8 @@ def create_extra_parameter_set(standard_params):
     s_mussel_for = np.arange(0.5, 1.6, 0.1)
     s_cockle_for = np.arange(0.5, 1.6, 0.1)
     s_mac_for = np.arange(0.5, 1.6, 0.1)
+    agg_factor_mud = np.arange(0, 55, 5)
+    agg_factor_bed = np.arange(0, 55, 5)
 
     # for each parameter create new parameter set
     for value in min_weight:
@@ -164,10 +168,23 @@ def create_extra_parameter_set(standard_params):
         for j in range(N):
             param_sets.append(new_set)
 
+    for value in agg_factor_mud:
+        new_set = vals.copy()
+        new_set[8] = value
+        for j in range(N):
+            param_sets.append(new_set)
+
+    for value in agg_factor_bed:
+        new_set = vals.copy()
+        new_set[9] = value
+        for j in range(N):
+            param_sets.append(new_set)
+
     # this is our final set!
     final_param_set = np.array(param_sets)
 
     # return the set as well as the value keys
+    print(vars, final_param_set)
     return vars, final_param_set
 
 
@@ -178,7 +195,7 @@ if __name__ == '__main__':
 
     # run the model in parallel
     starttime = time.time()
-    pool = multiprocessing.Pool(processes=40)
+    pool = multiprocessing.Pool(processes=50)
     results = pool.map(run_model, range(len(param_set_vals)))
     pool.close()
     print('That took {} seconds'.format(time.time() - starttime))
