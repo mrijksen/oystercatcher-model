@@ -38,15 +38,15 @@ def run_model(i):
     model_output = model.data
 
     print("Finishing single run {} out of {}".format(i + 1, 5))
-    return model_output
+    return [model_output, model.patch_data]
 
 
 if __name__ == "__main__":
 
     # run the model in parallel
     starttime = time.time()
-    pool = multiprocessing.Pool(processes=5)
-    results = pool.map(run_model, range(5))
+    pool = multiprocessing.Pool(processes=1)
+    results = pool.map(run_model, range(1))
     pool.close()
     print('That took {} seconds'.format(time.time() - starttime))
 
@@ -54,3 +54,4 @@ if __name__ == "__main__":
     output = open('../results/single_simulation_runs/{}_10000agents_standardparams.pkl'.format(start_year), 'wb')
     pickle.dump(results, output)
     output.close()
+

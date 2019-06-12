@@ -291,7 +291,7 @@ class OystercatcherModel(Model):
         self.data['total_num_s'].append(len(shellfish_specialists))
         self.data['total_num_agents'].append(len(self.schedule.agents))
 
-        # calculate mean weight of diet specialization groups
+        # calculate mean weight of diet specialization groups #todo: if no agents left, mean = 0
         mean_weight_w = np.mean([agent.weight for agent in worm_specialists])
         mean_weight_s = np.mean([agent.weight for agent in shellfish_specialists])
         mean_weight_w_std = np.std([agent.weight for agent in self.schedule.agents if agent.specialization == 'worm'])
@@ -316,6 +316,10 @@ class OystercatcherModel(Model):
                                                               for agent in worm_specialists]) / len(worm_specialists))
         self.data['mean_sum_squares_weight_s'].append(np.sum([((agent.weight - self.reference_weight_birds) ** 2)
                                                               for agent in shellfish_specialists]) / len(shellfish_specialists))
+
+        # todo: sla ook eens posities op van shellfish/worms om te kijken of mossel patches worden bezocht
+        self.data['worm_positions'].append([agent.pos for agent in worm_specialists])
+        self.data['shellfish_positions'].append([agent.pos for agent in shellfish_specialists])
 
         # todo: deze ook in defaultdict opslaan
         self.cockle_fresh_weight_list.append(self.cockle_fresh_weight[:, 0][-1])
