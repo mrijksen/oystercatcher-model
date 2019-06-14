@@ -163,7 +163,7 @@ if __name__ == '__main__':
 
     # run the model in parallel
     starttime = time.time()
-    pool = multiprocessing.Pool(processes=50)
+    pool = multiprocessing.Pool(processes=2)
     results = pool.map(run_model, range(len(param_set_vals)))
     pool.close()
     print('That took {} seconds'.format(time.time() - starttime))
