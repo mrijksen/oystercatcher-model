@@ -52,20 +52,20 @@ def get_model_data(model):
     final_num_s = model.data['total_num_s'][-1]
 
     # mean foraging time of diet specialists
-    final_mean_foraging_w = np.mean(model.data['mean_foraging_w'])
-    final_mean_foraging_s = np.mean(model.data['mean_foraging_s'])
+    final_mean_foraging_w = np.nanmean(model.data['mean_foraging_w'])
+    final_mean_foraging_s = np.nanmean(model.data['mean_foraging_s'])
 
     # get mean weight
-    final_mean_weight_w = np.mean(model.data['mean_weight_w'])
-    final_mean_weight_s = np.mean(model.data['mean_weight_s'])
+    final_mean_weight_w = np.nanmean(model.data['mean_weight_w'])
+    final_mean_weight_s = np.nanmean(model.data['mean_weight_s'])
 
     # get final weight (for sensitivity analysis)
     end_mean_weight_w = model.data['mean_weight_w'][-1]
     end_mean_weight_s = model.data['mean_weight_s'][-1]
 
     # get deviation from refweight throughout simulation (mean of mean sum of squares)
-    mean_sumsq_weight_w = np.mean(model.data['mean_sum_squares_weight_w'])
-    mean_sumsq_weight_s = np.mean(model.data['mean_sum_squares_weight_s'])
+    mean_sumsq_weight_w = np.nanmean(model.data['mean_sum_squares_weight_w'])
+    mean_sumsq_weight_s = np.nanmean(model.data['mean_sum_squares_weight_s'])
     return [start_num_w, start_num_s, final_num_w, final_num_s, final_mean_foraging_w, final_mean_foraging_s,
             final_mean_weight_w, final_mean_weight_s, end_mean_weight_w, end_mean_weight_s, mean_sumsq_weight_w,
             mean_sumsq_weight_s]  # also return dict with variable names
