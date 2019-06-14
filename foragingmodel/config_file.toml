@@ -35,14 +35,14 @@ AFDWenergyContent = 22.5 	# kJ / gram	ZwartEnsDurellEtAl1996
 RatioAFDWtoWet = 0.16 		# afdw per g wtw	ZwartEnsDurellEtAl1996
 
 # conversion cockle FW to size
-CockFWtoSizeA = 14.610 		# Ens
+CockFWtoSizeA = 14.610 		# Ens, unpublished, taken from WEBTICS
 CockFWtoSizeB = 0.317766
 
 # conversion wet weight to afdw for worms
 conversion_afdw_wtw = 0.17 	# conversion from thesis Jeroen Onrust
 
 # mussel data
-mussel_density = 99999 		# infinite density
+mussel_density = 1000 		# infinite density
 mussel_wtw_gain = -0.0025 	# wtw gain per day, GossCustard2001
 mussel_afdw = 0.85 			# start weight, g AFDW GossCustard2001
 
@@ -96,9 +96,21 @@ thermo_b = 30.3
 metabolic_a = 0.061 	# zwartsenskerstenetal1996 kJ/day
 metabolic_b = 1.489
 
+
 # ----------------------------- Sensitivity Analysis Parameters --------------------------- #
 
-relative_density = 0.5 		# relative prey density
-relative_threshold = 0.6		# relative leaving_threshold
-agg_factor_mudflats = 16 	# aggregation factor on mudflats
-agg_factor_bed = 16			# aggregation factor on mussel beds
+relative_threshold = 1		# relative leaving_threshold
+agg_factor_mudflats = 8 	# aggregation factor on mudflats
+agg_factor_bed = 8			# aggregation factor on mussel beds
+
+
+# ------------------------------- Scenario Analysis Parameters ---------------------------- #
+
+# absolute changes in environmental input
+temperature_change = 0
+waterlevel_change = 0
+
+# relative changes in density
+mussel_density_change = 1
+cockle_density_change = 1
+macoma_density_change = 1
