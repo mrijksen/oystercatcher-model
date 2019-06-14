@@ -28,10 +28,16 @@ class OystercatcherModel(Model):
         super().__init__()
 
         # SA parameters
-        self.relative_density = params["relative_density"]
         self.relative_threshold = params["relative_threshold"]
         self.agg_factor_mudflats = params["agg_factor_mudflats"]
         self.agg_factor_bed = params["agg_factor_bed"]
+
+        # scenario analysis parameters
+        self.temperature_change = params["temperature_change"]
+        self.waterlevel_change = params["waterlevel_change"]
+        self.mussel_density_change = params["mussel_density_change"]
+        self.cockle_density_change = params["cockle_density_change"]
+        self.macoma_density_change = params["macoma_density_change"]
 
         # get data files
         self.patch_data = df_patch_data
@@ -91,15 +97,15 @@ class OystercatcherModel(Model):
                                                 'Cockle_mj_WW']].values
         self.cockle_densities = df_patch_data[['Cockle_1j_dens',
                                                'Cockle_2j_dens',
-                                               'Cockle_mj_dens']].values * self.relative_density
+                                               'Cockle_mj_dens']].values * self.cockle_density_change
 
         # macoma data
         self.macoma_wet_weight = df_patch_data['Macoma_WW'].values
-        self.macoma_density = df_patch_data['Macoma_dens'].values * self.relative_density
+        self.macoma_density = df_patch_data['Macoma_dens'].values * self.macoma_density_change
         self.handling_time_macoma = self.calculate_handling_time_macoma()  # does not change during simulation
 
         # mussel data
-        self.mussel_density = params["mussel_density"] # infinitely rich mussel patches
+        self.mussel_density = params["mussel_density"] * self.mussel_density_change# infinitely rich mussel patches
         self.mussel_wtw_gain = params["mussel_wtw_gain"] / (24 / (self.resolution_min / 60))  # wtw gain per time step
         self.mussel_afdw = params["mussel_afdw"]  # g, at 1 september
         self.mussel_wet_weight = self.mussel_afdw / self.RatioAFDWtoWet  # g WtW calculated with conversion factor
@@ -202,7 +208,7 @@ class OystercatcherModel(Model):
         time_step = self.schedule.time
 
         # get new waterheight and patch availability
-        self.waterheight = self.waterheight_data[time_step]
+        self.waterheight = self.waterheight_data[time_step] + self.waterlevel_change
 
         # date time
         self.date_time = self.date_time_data[time_step]
@@ -210,7 +216,7 @@ class OystercatcherModel(Model):
         # check day or night
         self.day_night = self.day_night_data[time_step]
 
-        # calculate available area for every patch todo: change to fraction "just" available
+        # calculate available area for every patch
         self.available_areas = self.df_patch_availability.loc[self.waterheight].values * self.patch_areas
 
         # calculate new mussel weight
@@ -226,7 +232,7 @@ class OystercatcherModel(Model):
             self.reference_weight_birds = self.weight_data[time_step]
             self.total_number_steps_in_cycle = self.steps_in_cycle_data[time_step]
             self.steps_to_low_tide = self.steps_low_tide_data[time_step]
-            self.temperature = self.temperature_data[time_step] - 2
+            self.temperature = self.temperature_data[time_step] + self.temperature_change
             self.proportion_macoma = self.proportion_macoma_data[time_step]
 
             # calculate new fresh weight cockles for 1y and 2y cockles
@@ -317,9 +323,13 @@ class OystercatcherModel(Model):
         self.data['mean_sum_squares_weight_s'].append(np.sum([((agent.weight - self.reference_weight_birds) ** 2)
                                                               for agent in shellfish_specialists]) / len(shellfish_specialists))
 
-        # todo: sla ook eens posities op van shellfish/worms om te kijken of mossel patches worden bezocht
+        # visited positions
         self.data['worm_positions'].append([agent.pos for agent in worm_specialists])
         self.data['shellfish_positions'].append([agent.pos for agent in shellfish_specialists])
+
+        # foraging times (for histogram)
+        self.data['foraging_times_w'].append([agent.time_foraged for agent in worm_specialists])
+        self.data['foraging_times_s'].append([agent.time_foraged for agent in shellfish_specialists])
 
         # todo: deze ook in defaultdict opslaan
         self.cockle_fresh_weight_list.append(self.cockle_fresh_weight[:, 0][-1])
