@@ -85,8 +85,14 @@ class OystercatcherModel(Model):
         # patches for shellfish/wormspecialists
         self.patch_indices_mudflats = np.where(self.patch_types == "Mudflat")[0]
         self.patch_indices_beds = np.where(self.patch_types == "Bed")[0]
-        self.patch_max_bed_index = np.max(self.patch_indices_beds)
+        self.patch_max_bed_index = max(self.patch_indices_beds, default=-1)
         self.patch_index_grassland = np.where(self.patch_types == "Grassland")[0]
+
+
+        # positions for specialists
+        possible_positions_worm = np.concatenate((self.patch_indices_mudflats, self.patch_index_grassland))
+        possible_positions_shellfish = np.concatenate((self.patch_indices_mudflats, self.patch_indices_beds))
+
 
         # cockle data
         self.cockle_fresh_weight = df_patch_data[['Cockle_1j_FW',
@@ -160,9 +166,7 @@ class OystercatcherModel(Model):
         self.energy_intake_mac, self.capture_rates_mudflats = [None, None, None, None, None]
         self.grassland_potential_wtw_intake, self.grassland_potential_energy_intake = self.grassland_potential_intake()
 
-        # positions for specialists
-        possible_positions_worm = np.concatenate((self.patch_indices_mudflats, self.patch_index_grassland)) # todo grass?
-        possible_positions_shellfish = np.concatenate((self.patch_indices_mudflats, self.patch_indices_beds))
+
 
         # create birds todo: gebruik hier de verdeling van HK voor de vogels, en maak een lijst met alle vogels
         for i in range(self.init_birds):
